@@ -6,6 +6,18 @@
 
 ## 📋 Historial de Versiones (Changelog)
 
+### **V1.3 — Copias de Seguridad, Identidad Visual y Portabilidad**
+**Fecha de creación:** 28 de noviembre de 2026
+
+* **Sistema de Guardar y Cargar Progreso:**
+  * Exportación completa del estado de la app mediante descarga de archivo `.json` (`evo-backup-YYYY-MM-DD.json`) o generación de código de respaldo (`EVO13_...`) copiable al portapapeles.
+  * Importación y restauración de progreso desde archivo o código con vista previa de resumen (nombre, nivel, liga, XP y monedas) antes de confirmar.
+  * Acceso rápido desde la barra superior (`💾 Guardar`) y en la sección de **Configuración & Backup** o pantalla inicial.
+* **Identidad Visual y Logo Integrado:**
+  * Incorporación del monograma vectorial de **EVO** directamente en el HTML (pantalla de inicio, bloqueo, barra superior, perfil y *favicon*) sin depender de archivos externos adicionales.
+
+---
+
 ### **V1.2 — Expansión Total, Ligas y Ecosistema Completo**
 **Fecha de creación:** 28 de noviembre de 2026
 
@@ -55,7 +67,7 @@
 
 ---
 
-## 🧩 Módulos Actuales (13 Apps en EVO V1.2)
+## 🧩 Módulos Actuales (13 Apps en EVO V1.3)
 
 1. **Perfil** — Identidad, estadísticas globales, liga actual y progreso de nivel.
 2. **Negocios** — Finanzas personales, ingresos/gastos, stock y objetivos económicos.
@@ -69,4 +81,4 @@
 10. **Ranking** — Clasificación competitiva por XP y ligas.
 11. **Juegos** — Retos rápidos de memoria, cálculo y velocidad de reacción.
 12. **Tienda** — Catálogo de recompensas reales canjeables con EVO Coins.
-13. **Configuración** — Seguridad, sonido, música, fondo animado y gestión de datos.
+13. **Configuración & Backup** — Seguridad, sonido, música, fondo animado, gestión de datos y copias de seguridad.
