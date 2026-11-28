@@ -1,0 +1,3743 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EVO — Personal Life OS</title>
+  <!-- Favicon SVG integrado con el monograma EVO -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%2300F0FF'/%3E%3Cstop offset='52%25' stop-color='%233B82F6'/%3E%3Cstop offset='100%25' stop-color='%238B5CF6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='22' fill='%230E0E12'/%3E%3Cpath d='M25 22 L41 22 L54 39 L71 22 L65 16 L86 14 L84 35 L78 29 L54 53 L35 31 L35 44 L50 44 L44 53 L35 53 L35 68 L62 68 L56 77 L25 77 Z' fill='url(%23g)'/%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            evo: {
+              bg: '#09090b',
+              card: '#121215',
+              surface: '#18181c',
+              border: '#27272a',
+              accent: '#f4f4f5',
+              muted: '#a1a1aa'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #09090b;
+      color: #f4f4f5;
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      overflow-x: hidden;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #09090b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #27272a;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3f3f46;
+    }
+    .glass-panel {
+      background: rgba(18, 18, 21, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid #27272a;
+    }
+    .app-card {
+      transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.25s ease;
+    }
+    .app-card:hover {
+      transform: translateY(-3px) scale(1.01);
+      border-color: #52525b;
+      background-color: #18181c;
+      box-shadow: 0 14px 30px -12px rgba(0, 0, 0, 0.75);
+    }
+    .app-card:active, button:active {
+      transform: scale(0.97);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.99); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes coinPopFloat {
+      0% { opacity: 0; transform: translate(-50%, 10px) scale(0.8); }
+      20% { opacity: 1; transform: translate(-50%, -6px) scale(1.08); }
+      80% { opacity: 1; transform: translate(-50%, -32px) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -48px) scale(0.95); }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.25); }
+      50% { box-shadow: 0 0 18px 2px rgba(251, 191, 36, 0.35); }
+    }
+    .animate-fade {
+      animation: fadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .coin-float {
+      animation: coinPopFloat 1.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .coin-glow {
+      animation: pulseGlow 2.4s infinite ease-in-out;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .animate-fade, .coin-float, .coin-glow, .app-card {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-zinc-200 selection:text-zinc-900 relative">
+
+  <!-- AMBIENT ANIMATED BACKGROUND CANVAS -->
+  <canvas id="bg-canvas" class="fixed inset-0 w-full h-full pointer-events-none z-0 opacity-0 transition-opacity duration-500"></canvas>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="fixed bottom-20 md:bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-xs w-full px-4 sm:px-0"></div>
+
+  <!-- FLOATING COIN POP CONTAINER -->
+  <div id="coin-pop-layer" class="fixed inset-0 pointer-events-none z-50"></div>
+
+  <!-- MODAL CONTAINER (Confirmations & Backup Previews) -->
+  <div id="modal-backdrop" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 hidden items-center justify-center p-4">
+    <div id="modal-box" class="bg-evo-card border border-evo-border rounded-2xl max-w-md w-full p-6 shadow-2xl animate-fade">
+      <h3 id="modal-title" class="text-lg font-semibold text-white mb-2"></h3>
+      <div id="modal-desc" class="text-sm text-evo-muted mb-5 whitespace-pre-line"></div>
+      <div id="modal-actions" class="flex justify-end gap-3"></div>
+    </div>
+  </div>
+
+  <!-- ==================== 1. INITIAL SETUP (FIRST TIME ONBOARDING) ==================== -->
+  <div id="screen-setup" class="hidden relative z-10 min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-evo-card border border-evo-border rounded-3xl p-6 sm:p-8 shadow-2xl animate-fade">
+      <div class="flex items-center gap-3.5 mb-6">
+        <!-- EVO Geometric Logo SVG -->
+        <div class="w-12 h-12 rounded-2xl bg-[#0e0e12] border border-zinc-800 flex items-center justify-center shadow-lg flex-shrink-0">
+          <svg viewBox="0 0 100 100" class="w-9 h-9" aria-label="Logo EVO">
+            <defs>
+              <linearGradient id="evoGradSetup" x1="0%" y1="100%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#00F0FF"/>
+                <stop offset="52%" stop-color="#3B82F6"/>
+                <stop offset="100%" stop-color="#8B5CF6"/>
+              </linearGradient>
+            </defs>
+            <path d="M25 22 L41 22 L54 39 L71 22 L65 16 L86 14 L84 35 L78 29 L54 53 L35 31 L35 44 L50 44 L44 53 L35 53 L35 68 L62 68 L56 77 L25 77 Z" fill="url(#evoGradSetup)"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-xl font-semibold tracking-tight text-white">Inicializar EVO</h1>
+          <p class="text-xs text-evo-muted">Tu sistema operativo personal · V1.3</p>
+        </div>
+      </div>
+
+      <form id="form-setup" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-evo-muted mb-1.5">Tu nombre o alias</label>
+          <input type="text" id="setup-name" required placeholder="Ej. Alex"
+            class="w-full bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-400 transition" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-evo-muted mb-1.5">Fecha de nacimiento</label>
+            <input type="date" id="setup-dob" required
+              class="w-full bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-zinc-400 transition" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-evo-muted mb-1.5">Edad confirmada</label>
+            <input type="number" id="setup-age" required min="10" max="99" placeholder="Ej. 15"
+              class="w-full bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-400 transition" />
+          </div>
+        </div>
+
+        <div id="setup-bday-preview" class="hidden bg-evo-surface/70 border border-evo-border rounded-xl p-3 text-xs text-zinc-300 flex items-center justify-between">
+          <span>🎂 Cumpleaños detectado:</span>
+          <span id="setup-bday-text" class="font-medium text-white"></span>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-evo-muted mb-1.5">Contraseña / PIN de acceso</label>
+          <input type="password" id="setup-pass" required minlength="4" placeholder="Mínimo 4 caracteres"
+            class="w-full bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-400 transition" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-evo-muted mb-1.5">Confirmar contraseña</label>
+          <input type="password" id="setup-pass-confirm" required minlength="4" placeholder="Repite tu contraseña"
+            class="w-full bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-400 transition" />
+        </div>
+
+        <p id="setup-error" class="text-xs text-red-400 hidden"></p>
+
+        <button type="submit"
+          class="w-full mt-2 bg-white hover:bg-zinc-200 text-black font-semibold text-sm py-3.5 rounded-xl transition cursor-pointer">
+          Crear mi espacio EVO →
+        </button>
+      </form>
+
+      <!-- Option to restore existing backup right from onboarding -->
+      <div class="mt-5 pt-4 border-t border-evo-border text-center">
+        <p class="text-[11px] text-evo-muted mb-2">¿Ya tenías una partida guardada en otro navegador?</p>
+        <label class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-evo-surface hover:bg-zinc-800 border border-evo-border text-xs text-cyan-300 font-medium cursor-pointer transition">
+          <span>↑ Cargar archivo de progreso (.json)</span>
+          <input type="file" accept=".json" class="hidden" onchange="handleBackupFileSelect(event)" />
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 2. LOCK SCREEN ==================== -->
+  <div id="screen-lock" class="hidden relative z-10 min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-evo-card border border-evo-border rounded-3xl p-7 text-center shadow-2xl animate-fade">
+      <!-- EVO Geometric Logo SVG -->
+      <div class="w-16 h-16 rounded-2xl bg-[#0e0e12] border border-zinc-800 flex items-center justify-center mx-auto mb-4 shadow-xl">
+        <svg viewBox="0 0 100 100" class="w-12 h-12" aria-label="Logo EVO">
+          <defs>
+            <linearGradient id="evoGradLock" x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#00F0FF"/>
+              <stop offset="52%" stop-color="#3B82F6"/>
+              <stop offset="100%" stop-color="#8B5CF6"/>
+            </linearGradient>
+          </defs>
+          <path d="M25 22 L41 22 L54 39 L71 22 L65 16 L86 14 L84 35 L78 29 L54 53 L35 31 L35 44 L50 44 L44 53 L35 53 L35 68 L62 68 L56 77 L25 77 Z" fill="url(#evoGradLock)"/>
+        </svg>
+      </div>
+      <h2 class="text-lg font-semibold text-white" id="lock-greeting">Hola de nuevo</h2>
+      <p class="text-xs text-evo-muted mt-1 mb-6">Introduce tu contraseña para desbloquear</p>
+
+      <form id="form-unlock" class="space-y-4">
+        <input type="password" id="unlock-pass" required placeholder="Contraseña"
+          class="w-full bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-center text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-400 transition" />
+        <p id="unlock-error" class="text-xs text-red-400 hidden">Contraseña incorrecta</p>
+        <button type="submit"
+          class="w-full bg-white hover:bg-zinc-200 text-black font-semibold text-sm py-3 rounded-xl transition cursor-pointer">
+          Desbloquear
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== 3. MAIN EVO OS SHELL ==================== -->
+  <div id="screen-main" class="hidden relative z-10 flex-1 flex flex-col">
+    <!-- TOP BAR -->
+    <header class="sticky top-0 z-30 glass-panel border-b border-evo-border">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-3">
+        <!-- Brand & Home button with SVG Logo -->
+        <div class="flex items-center gap-2.5 min-w-0">
+          <button onclick="navigateTo('hub')" class="flex items-center gap-2.5 group cursor-pointer focus:outline-none min-w-0">
+            <div class="w-9 h-9 rounded-xl bg-[#0e0e12] border border-zinc-700/80 flex-shrink-0 flex items-center justify-center group-hover:scale-105 group-hover:border-cyan-400/50 transition shadow-md">
+              <svg viewBox="0 0 100 100" class="w-7 h-7" aria-label="EVO">
+                <defs>
+                  <linearGradient id="evoGradNav" x1="0%" y1="100%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#00F0FF"/>
+                    <stop offset="52%" stop-color="#3B82F6"/>
+                    <stop offset="100%" stop-color="#8B5CF6"/>
+                  </linearGradient>
+                </defs>
+                <path d="M25 22 L41 22 L54 39 L71 22 L65 16 L86 14 L84 35 L78 29 L54 53 L35 31 L35 44 L50 44 L44 53 L35 53 L35 68 L62 68 L56 77 L25 77 Z" fill="url(#evoGradNav)"/>
+              </svg>
+            </div>
+            <div class="text-left truncate">
+              <span id="header-username" class="block text-sm font-semibold text-white leading-none truncate">EVO OS</span>
+              <span id="header-league" class="block text-[11px] text-emerald-400 mt-1 truncate">🥉 Bronce · 0 XP</span>
+            </div>
+          </button>
+        </div>
+
+        <!-- Right Stats, Quick Save, Visual/Audio Controls & Lock -->
+        <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+          <button onclick="downloadBackupFile()" title="Guardar copia de progreso (.json)"
+            class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-evo-surface hover:bg-zinc-800 border border-evo-border hover:border-cyan-500/40 text-xs text-cyan-300 transition cursor-pointer">
+            <span>💾</span>
+            <span class="hidden md:inline text-[11px] font-medium">Guardar</span>
+          </button>
+
+          <button onclick="toggleAnimatedBg()" id="btn-bg-toggle" title="Activar/Desactivar fondo animado"
+            class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-evo-surface hover:bg-zinc-800 border border-evo-border text-xs text-evo-muted hover:text-white transition cursor-pointer">
+            <span id="bg-icon">✦</span>
+            <span class="hidden lg:inline text-[11px]">Fondo</span>
+          </button>
+
+          <button onclick="toggleBgMusic()" id="btn-music-toggle" title="Música ambiental Lo-Fi / Synth"
+            class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-evo-surface hover:bg-zinc-800 border border-evo-border text-xs text-evo-muted hover:text-white transition cursor-pointer">
+            <span id="music-icon">♪</span>
+            <span id="music-status-label" class="hidden xl:inline text-[11px]">Música</span>
+          </button>
+
+          <button onclick="toggleSfx()" id="btn-sfx-toggle" title="Efectos de sonido"
+            class="p-2 rounded-xl bg-evo-surface hover:bg-zinc-800 border border-evo-border text-xs text-white transition cursor-pointer">
+            <span id="sfx-icon">🔊</span>
+          </button>
+
+          <button onclick="navigateTo('tienda')" title="Ir a la Tienda EVO"
+            class="coin-glow flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer">
+            <span>🪙</span>
+            <span id="header-coins">0</span>
+            <span class="hidden sm:inline text-amber-400/80 font-normal">EVO</span>
+          </button>
+
+          <button onclick="lockApp()" title="Bloquear EVO"
+            class="p-2 rounded-xl bg-evo-surface hover:bg-zinc-800 border border-evo-border text-evo-muted hover:text-white transition cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN CONTENT VIEWPORT -->
+    <main id="app-viewport" class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <!-- Dynamic Content Injected Here -->
+    </main>
+
+    <!-- MOBILE BOTTOM BAR -->
+    <nav class="md:hidden sticky bottom-0 z-30 glass-panel border-t border-evo-border px-2 py-2 flex justify-around items-center">
+      <button onclick="navigateTo('hub')" class="flex flex-col items-center p-1.5 text-[11px] text-evo-muted hover:text-white">
+        <span class="text-base">⊞</span><span>Apps</span>
+      </button>
+      <button onclick="navigateTo('misiones')" class="flex flex-col items-center p-1.5 text-[11px] text-evo-muted hover:text-white">
+        <span class="text-base">⚑</span><span>Misiones</span>
+      </button>
+      <button onclick="navigateTo('habitos')" class="flex flex-col items-center p-1.5 text-[11px] text-evo-muted hover:text-white">
+        <span class="text-base">✓</span><span>Hábitos</span>
+      </button>
+      <button onclick="navigateTo('tienda')" class="flex flex-col items-center p-1.5 text-[11px] text-amber-300">
+        <span class="text-base">🪙</span><span>Tienda</span>
+      </button>
+      <button onclick="navigateTo('configuracion')" class="flex flex-col items-center p-1.5 text-[11px] text-cyan-300">
+        <span class="text-base">💾</span><span>Backup</span>
+      </button>
+    </nav>
+  </div>
+
+  <script>
+    // ==================== STATE MANAGEMENT & STORAGE ====================
+    const STORAGE_KEY = 'evo_os_data_v2';
+
+    const LEAGUES = [
+      { id: 'bronce', name: 'Bronce', icon: '🥉', minXp: 0, color: 'text-amber-600', badgeBg: 'bg-amber-900/20 border-amber-700/40 text-amber-400' },
+      { id: 'plata', name: 'Plata', icon: '🥈', minXp: 250, color: 'text-zinc-300', badgeBg: 'bg-zinc-700/30 border-zinc-500/40 text-zinc-200' },
+      { id: 'oro', name: 'Oro', icon: '🥇', minXp: 700, color: 'text-amber-400', badgeBg: 'bg-amber-500/15 border-amber-400/40 text-amber-300' },
+      { id: 'platino', name: 'Platino', icon: '💠', minXp: 1500, color: 'text-cyan-300', badgeBg: 'bg-cyan-500/15 border-cyan-400/40 text-cyan-300' },
+      { id: 'diamante', name: 'Diamante', icon: '💎', minXp: 3000, color: 'text-sky-300', badgeBg: 'bg-sky-500/15 border-sky-400/40 text-sky-300' },
+      { id: 'maestro', name: 'Maestro', icon: '⚔️', minXp: 6000, color: 'text-emerald-300', badgeBg: 'bg-emerald-500/15 border-emerald-400/40 text-emerald-300' },
+      { id: 'leyenda', name: 'Leyenda EVO', icon: '👑', minXp: 12000, color: 'text-amber-300', badgeBg: 'bg-amber-400/20 border-amber-300/50 text-amber-200' }
+    ];
+
+    const DEFAULT_STATE = {
+      initialized: false,
+      lastBackupAt: null,
+      user: {
+        name: '',
+        dob: '',
+        age: 15,
+        password: '',
+        coins: 50,
+        xp: 0
+      },
+      visual: {
+        animatedBg: true
+      },
+      audio: {
+        sfxEnabled: true,
+        musicEnabled: false,
+        musicStyle: 'lofi',
+        musicVolume: 0.25
+      },
+      rewardsConfig: {
+        habit: 15,
+        studyPomodoro: 25,
+        workout: 35,
+        skillPractice: 20
+      },
+      apps: {
+        perfil: {
+          onboarded: true,
+          bio: 'Construyendo mi mejor versión día a día.',
+          mainGoal: 'Subir notas, mejorar físico y dominar finanzas.'
+        },
+        negocios: {
+          onboarded: false,
+          financialGoal: 500,
+          monthlyGoal: 150,
+          capital: 0,
+          products: [],
+          transactions: []
+        },
+        estudio: {
+          onboarded: false,
+          subjects: ['Matemáticas', 'Inglés', 'Catalán', 'Física y Química'],
+          targetGrade: 8.5,
+          tasks: [],
+          grades: [],
+          flashcards: [],
+          pomodorosCompleted: 0,
+          studyMinutes: 0
+        },
+        deporte: {
+          onboarded: false,
+          weeklyGoal: 3,
+          focus: 'Fuerza y resistencia',
+          waterGlasses: 0,
+          recoveryScore: 8,
+          sessions: []
+        },
+        habitos: {
+          onboarded: false,
+          list: []
+        },
+        habilidades: {
+          onboarded: false,
+          list: []
+        },
+        diario: {
+          onboarded: true,
+          entries: []
+        },
+        misiones: {
+          onboarded: true,
+          dailyMissions: [
+            { id: 'm1', title: 'Completar 2 bloques de estudio o lectura', xp: 40, coins: 20, lastCompleted: null },
+            { id: 'm2', title: 'Cumplir al menos 3 hábitos diarios', xp: 35, coins: 15, lastCompleted: null },
+            { id: 'm3', title: 'Registrar progreso en Diario o Deporte', xp: 30, coins: 15, lastCompleted: null }
+          ],
+          projects: [
+            {
+              id: 'proj_1',
+              title: 'Aprobar todos los Globales con nota',
+              deadline: 'Esta semana',
+              subtasks: [
+                { id: 'st1', title: 'Repasar fórmulas y ejercicios clave', done: false },
+                { id: 'st2', title: 'Hacer 3 sesiones Pomodoro de repaso', done: false }
+              ]
+            }
+          ],
+          quickTasks: []
+        },
+        biblioteca: {
+          onboarded: true,
+          books: [
+            { id: 'b1', title: 'Hábitos Atómicos', author: 'James Clear', status: 'reading', currentPage: 45, totalPages: 320, rating: 5, notes: 'Mejorar un 1% cada día marca la diferencia a largo plazo.' }
+          ]
+        },
+        ranking: {
+          onboarded: true,
+          friends: [
+            { id: 'f1', name: 'Marc B.', xp: 820, streak: 9 },
+            { id: 'f2', name: 'Carla R.', xp: 410, streak: 5 },
+            { id: 'f3', name: 'Dani V.', xp: 1650, streak: 14 },
+            { id: 'f4', name: 'Sofía M.', xp: 190, streak: 3 }
+          ]
+        },
+        juegos: {
+          onboarded: true,
+          bestMemory: 0,
+          bestMath: 0,
+          bestReaction: null,
+          dailyRewardDate: null
+        },
+        tienda: {
+          onboarded: true,
+          items: [
+            { id: 'r1', title: '1 hora libre de ocio / videojuegos', cost: 60, category: 'Ocio', icon: '🎮' },
+            { id: 'r2', title: 'Capricho o snack favorito', cost: 80, category: 'Comida', icon: '🍫' },
+            { id: 'r3', title: 'Compra personal (hasta 15€)', cost: 250, category: 'Compra', icon: '🛍️' },
+            { id: 'r4', title: 'Día sin tareas extra / descanso total', cost: 150, category: 'Descanso', icon: '🔋' }
+          ],
+          history: []
+        },
+        configuracion: {
+          onboarded: true
+        }
+      }
+    };
+
+    function mergeWithDefaults(parsed) {
+      return {
+        ...JSON.parse(JSON.stringify(DEFAULT_STATE)),
+        ...parsed,
+        user: { ...DEFAULT_STATE.user, ...(parsed.user || {}) },
+        visual: { ...DEFAULT_STATE.visual, ...(parsed.visual || {}) },
+        audio: { ...DEFAULT_STATE.audio, ...(parsed.audio || {}) },
+        rewardsConfig: { ...DEFAULT_STATE.rewardsConfig, ...(parsed.rewardsConfig || {}) },
+        apps: {
+          perfil: { ...DEFAULT_STATE.apps.perfil, ...(parsed.apps?.perfil || {}) },
+          negocios: { ...DEFAULT_STATE.apps.negocios, ...(parsed.apps?.negocios || {}) },
+          estudio: { ...DEFAULT_STATE.apps.estudio, ...(parsed.apps?.estudio || {}) },
+          deporte: { ...DEFAULT_STATE.apps.deporte, ...(parsed.apps?.deporte || {}) },
+          habitos: { ...DEFAULT_STATE.apps.habitos, ...(parsed.apps?.habitos || {}) },
+          habilidades: { ...DEFAULT_STATE.apps.habilidades, ...(parsed.apps?.habilidades || {}) },
+          diario: { ...DEFAULT_STATE.apps.diario, ...(parsed.apps?.diario || {}) },
+          misiones: { ...DEFAULT_STATE.apps.misiones, ...(parsed.apps?.misiones || {}) },
+          biblioteca: { ...DEFAULT_STATE.apps.biblioteca, ...(parsed.apps?.biblioteca || {}) },
+          ranking: { ...DEFAULT_STATE.apps.ranking, ...(parsed.apps?.ranking || {}) },
+          juegos: { ...DEFAULT_STATE.apps.juegos, ...(parsed.apps?.juegos || {}) },
+          tienda: { ...DEFAULT_STATE.apps.tienda, ...(parsed.apps?.tienda || {}) },
+          configuracion: { ...DEFAULT_STATE.apps.configuracion, ...(parsed.apps?.configuracion || {}) }
+        }
+      };
+    }
+
+    let state = loadState();
+    let currentView = 'hub';
+    let pomodoroInterval = null;
+    let pomodoroSeconds = 25 * 60;
+    let pomodoroMode = 'focus';
+    let pomodoroRunning = false;
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('evo_os_state_v1');
+        if (!raw) return JSON.parse(JSON.stringify(DEFAULT_STATE));
+        return mergeWithDefaults(JSON.parse(raw));
+      } catch (e) {
+        console.error('Error loading EVO state:', e);
+        return JSON.parse(JSON.stringify(DEFAULT_STATE));
+      }
+    }
+
+    // ==================== BACKUP & RESTORE SYSTEM (V1.3) ====================
+    function buildBackupPayload() {
+      return {
+        evoVersion: '1.3',
+        exportedAt: new Date().toISOString(),
+        data: state
+      };
+    }
+
+    function encodeBackupString(payloadObj) {
+      const jsonStr = JSON.stringify(payloadObj);
+      const bytes = new TextEncoder().encode(jsonStr);
+      let binStr = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binStr += String.fromCharCode(bytes[i]);
+      }
+      return 'EVO13_' + btoa(binStr);
+    }
+
+    function decodeBackupString(rawStr) {
+      const trimmed = rawStr.trim();
+      if (!trimmed) throw new Error('El código o contenido está vacío.');
+      if (trimmed.startsWith('{')) {
+        return JSON.parse(trimmed);
+      }
+      const base64Part = trimmed.startsWith('EVO13_') ? trimmed.slice(6) : trimmed;
+      const binStr = atob(base64Part);
+      const bytes = new Uint8Array(binStr.length);
+      for (let i = 0; i < binStr.length; i++) {
+        bytes[i] = binStr.charCodeAt(i);
+      }
+      const jsonStr = new TextDecoder().decode(bytes);
+      return JSON.parse(jsonStr);
+    }
+
+    function extractValidatedState(parsedObj) {
+      const candidate = parsedObj && parsedObj.data ? parsedObj.data : parsedObj;
+      if (!candidate || typeof candidate !== 'object' || !candidate.user || typeof candidate.user.name !== 'string') {
+        throw new Error('El archivo o código no corresponde a una copia válida de EVO.');
+      }
+      return mergeWithDefaults(candidate);
+    }
+
+    function downloadBackupFile() {
+      const nowStr = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      state.lastBackupAt = nowStr;
+      saveState();
+
+      const payload = buildBackupPayload();
+      const jsonStr = JSON.stringify(payload, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `evo-backup-${getTodayStr()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      SoundEngine.playCoin();
+      showToast(`Progreso guardado: evo-backup-${getTodayStr()}.json`, 'coin');
+      if (currentView === 'configuracion') renderConfiguracion(document.getElementById('app-viewport'));
+    }
+
+    function copyBackupCodeToClipboard() {
+      try {
+        const nowStr = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        state.lastBackupAt = nowStr;
+        saveState();
+
+        const code = encodeBackupString(buildBackupPayload());
+        const ta = document.createElement('textarea');
+        ta.value = code;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+
+        SoundEngine.playCoin();
+        showToast('Código de respaldo copiado al portapapeles', 'coin');
+        if (currentView === 'configuracion') renderConfiguracion(document.getElementById('app-viewport'));
+      } catch (err) {
+        showToast('No se pudo copiar el código de respaldo', 'error');
+      }
+    }
+
+    function promptRestorePreview(restoredState) {
+      const lg = getLeagueInfo(restoredState.user.xp).current;
+      const lvl = getLevelInfo(restoredState.user.xp).level;
+      const summary = [
+        `• Perfil: ${restoredState.user.name || 'Sin nombre'}`,
+        `• Nivel ${lvl} (${lg.icon} Liga ${lg.name}) · ${restoredState.user.xp} XP`,
+        `• Saldo: 🪙 ${restoredState.user.coins} EVO Coins`,
+        `• Entrenos: ${restoredState.apps.deporte.sessions.length} · Hábitos: ${restoredState.apps.habitos.list.length}`,
+        '',
+        '¿Quieres reemplazar tu progreso actual por esta copia?'
+      ].join('\n');
+
+      openModal({
+        title: 'Confirmar carga de progreso',
+        desc: summary,
+        confirmText: 'Sí, cargar progreso',
+        cancelText: 'Cancelar',
+        onConfirm: () => {
+          restoredState.initialized = true;
+          state = restoredState;
+          saveState();
+          SoundEngine.playFanfare();
+          enterMainOS();
+          showToast(`¡Progreso de ${state.user.name} restaurado!`, 'coin');
+        }
+      });
+    }
+
+    function handleBackupFileSelect(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          const validatedState = extractValidatedState(parsed);
+          promptRestorePreview(validatedState);
+        } catch (err) {
+          SoundEngine.playClick(200);
+          showToast(err.message || 'Error al leer el archivo JSON', 'error');
+        } finally {
+          event.target.value = '';
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function handleBackupCodeRestore() {
+      const inputEl = document.getElementById('restore-code-input');
+      if (!inputEl) return;
+      try {
+        const parsed = decodeBackupString(inputEl.value);
+        const validatedState = extractValidatedState(parsed);
+        promptRestorePreview(validatedState);
+      } catch (err) {
+        SoundEngine.playClick(200);
+        showToast('Código inválido o incompleto. Verifica que lo copiaste entero.', 'error');
+      }
+    }
+
+    // ==================== ANIMATED AMBIENT CANVAS ENGINE ====================
+    const BgEngine = {
+      canvas: null,
+      ctx: null,
+      particles: [],
+      animId: null,
+      running: false,
+
+      init() {
+        this.canvas = document.getElementById('bg-canvas');
+        if (!this.canvas) return;
+        this.ctx = this.canvas.getContext('2d');
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        this.createParticles();
+        this.syncState();
+      },
+
+      resize() {
+        if (!this.canvas) return;
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+      },
+
+      createParticles() {
+        const count = Math.min(48, Math.floor((window.innerWidth * window.innerHeight) / 26000));
+        this.particles = Array.from({ length: Math.max(18, count) }, () => ({
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: (Math.random() - 0.5) * 0.35,
+          r: Math.random() * 1.6 + 0.6
+        }));
+      },
+
+      syncState() {
+        if (!this.canvas) return;
+        if (state.visual.animatedBg) {
+          this.canvas.classList.remove('opacity-0');
+          this.canvas.classList.add('opacity-100');
+          if (!this.running) this.start();
+        } else {
+          this.canvas.classList.remove('opacity-100');
+          this.canvas.classList.add('opacity-0');
+          this.stop();
+        }
+        const btn = document.getElementById('btn-bg-toggle');
+        if (btn) {
+          if (state.visual.animatedBg) {
+            btn.classList.add('border-cyan-500/40', 'text-cyan-300', 'bg-cyan-500/10');
+          } else {
+            btn.classList.remove('border-cyan-500/40', 'text-cyan-300', 'bg-cyan-500/10');
+          }
+        }
+      },
+
+      start() {
+        if (this.running) return;
+        this.running = true;
+        const loop = () => {
+          if (!this.running) return;
+          this.draw();
+          this.animId = requestAnimationFrame(loop);
+        };
+        loop();
+      },
+
+      stop() {
+        this.running = false;
+        if (this.animId) {
+          cancelAnimationFrame(this.animId);
+          this.animId = null;
+        }
+      },
+
+      draw() {
+        const ctx = this.ctx;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        const grad = ctx.createRadialGradient(w * 0.5, h * 0.15, 20, w * 0.5, h * 0.25, Math.max(w, h) * 0.65);
+        grad.addColorStop(0, 'rgba(0, 240, 255, 0.045)');
+        grad.addColorStop(0.5, 'rgba(139, 92, 246, 0.03)');
+        grad.addColorStop(1, 'rgba(9, 9, 11, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        for (let i = 0; i < this.particles.length; i++) {
+          const p = this.particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          if (p.x < 0 || p.x > w) p.vx *= -1;
+          if (p.y < 0 || p.y > h) p.vy *= -1;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(212, 212, 216, 0.28)';
+          ctx.fill();
+
+          for (let j = i + 1; j < this.particles.length; j++) {
+            const p2 = this.particles[j];
+            const dx = p.x - p2.x;
+            const dy = p.y - p2.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < 130) {
+              ctx.beginPath();
+              ctx.moveTo(p.x, p.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.strokeStyle = `rgba(161, 161, 170, ${(1 - dist / 130) * 0.11})`;
+              ctx.lineWidth = 0.8;
+              ctx.stroke();
+            }
+          }
+        }
+      }
+    };
+
+    function toggleAnimatedBg() {
+      state.visual.animatedBg = !state.visual.animatedBg;
+      saveState();
+      BgEngine.syncState();
+      SoundEngine.playClick(600);
+      showToast(state.visual.animatedBg ? 'Fondo animado activado' : 'Fondo animado desactivado');
+      if (currentView === 'configuracion') renderConfiguracion(document.getElementById('app-viewport'));
+    }
+
+    // ==================== WEB AUDIO API SOUND & MUSIC ENGINE ====================
+    const SoundEngine = {
+      ctx: null,
+      musicTimer: null,
+      stepIndex: 0,
+
+      ensureContext() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+        return this.ctx;
+      },
+
+      playClick(pitch = 520) {
+        if (!state.audio.sfxEnabled) return;
+        const ctx = this.ensureContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(pitch, now);
+        osc.frequency.exponentialRampToValueAtTime(pitch * 0.65, now + 0.055);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.065);
+      },
+
+      playCoin() {
+        if (!state.audio.sfxEnabled) return;
+        const ctx = this.ensureContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        const notes = [987.77, 1318.51];
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          const start = now + idx * 0.075;
+          osc.frequency.setValueAtTime(freq, start);
+          gain.gain.setValueAtTime(0.11, start);
+          gain.gain.exponentialRampToValueAtTime(0.001, start + 0.28);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(start);
+          osc.stop(start + 0.3);
+        });
+      },
+
+      playFanfare() {
+        if (!state.audio.sfxEnabled) return;
+        const ctx = this.ensureContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        const chord = [523.25, 659.25, 783.99, 1046.5];
+        chord.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          const t = now + idx * 0.07;
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.09, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.36);
+        });
+      },
+
+      playLock(locking = true) {
+        if (!state.audio.sfxEnabled) return;
+        const ctx = this.ensureContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        if (locking) {
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.exponentialRampToValueAtTime(220, now + 0.16);
+        } else {
+          osc.frequency.setValueAtTime(280, now);
+          osc.frequency.exponentialRampToValueAtTime(560, now + 0.16);
+        }
+        gain.gain.setValueAtTime(0.09, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.19);
+      },
+
+      startMusic() {
+        this.stopMusic();
+        if (!state.audio.musicEnabled) return;
+        const ctx = this.ensureContext();
+        if (!ctx) return;
+
+        const lofiNotes = [174.61, 220.0, 261.63, 329.63, 164.81, 196.0, 246.94, 293.66, 146.83, 174.61, 220.0, 261.63, 130.81, 196.0, 246.94, 329.63];
+        const synthNotes = [220.0, 277.18, 329.63, 440.0, 196.0, 246.94, 293.66, 392.0, 174.61, 220.0, 261.63, 349.23, 164.81, 246.94, 329.63, 493.88];
+
+        const tick = () => {
+          if (!state.audio.musicEnabled || !this.ctx) return;
+          if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+
+          const notes = state.audio.musicStyle === 'synth' ? synthNotes : lofiNotes;
+          const freq = notes[this.stepIndex % notes.length];
+          this.stepIndex++;
+
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const filter = this.ctx.createBiquadFilter();
+          const gain = this.ctx.createGain();
+
+          osc.type = state.audio.musicStyle === 'synth' ? 'sawtooth' : 'sine';
+          osc.frequency.setValueAtTime(freq, now);
+
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(state.audio.musicStyle === 'synth' ? 950 : 620, now);
+
+          const vol = Math.max(0.01, Math.min(0.6, state.audio.musicVolume)) * 0.14;
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(vol, now + 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.68);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now);
+          osc.stop(now + 0.7);
+        };
+
+        tick();
+        const intervalMs = state.audio.musicStyle === 'synth' ? 420 : 540;
+        this.musicTimer = setInterval(tick, intervalMs);
+      },
+
+      stopMusic() {
+        if (this.musicTimer) {
+          clearInterval(this.musicTimer);
+          this.musicTimer = null;
+        }
+      }
+    };
+
+    function syncAudioButtons() {
+      const sfxIcon = document.getElementById('sfx-icon');
+      const musicIcon = document.getElementById('music-icon');
+      const musicLabel = document.getElementById('music-status-label');
+      const musicBtn = document.getElementById('btn-music-toggle');
+
+      if (sfxIcon) sfxIcon.textContent = state.audio.sfxEnabled ? '🔊' : '🔇';
+      if (musicIcon) musicIcon.textContent = state.audio.musicEnabled ? '🎵' : '♪';
+      if (musicLabel) musicLabel.textContent = state.audio.musicEnabled ? 'On' : 'Música';
+      if (musicBtn) {
+        if (state.audio.musicEnabled) {
+          musicBtn.classList.add('border-emerald-500/40', 'text-emerald-300', 'bg-emerald-500/10');
+        } else {
+          musicBtn.classList.remove('border-emerald-500/40', 'text-emerald-300', 'bg-emerald-500/10');
+        }
+      }
+    }
+
+    function toggleSfx() {
+      state.audio.sfxEnabled = !state.audio.sfxEnabled;
+      saveState();
+      syncAudioButtons();
+      if (state.audio.sfxEnabled) SoundEngine.playClick(640);
+      showToast(state.audio.sfxEnabled ? 'Efectos de sonido activados' : 'Efectos de sonido silenciados');
+    }
+
+    function toggleBgMusic() {
+      state.audio.musicEnabled = !state.audio.musicEnabled;
+      saveState();
+      syncAudioButtons();
+      if (state.audio.musicEnabled) {
+        SoundEngine.startMusic();
+        showToast(`Música ambiental (${state.audio.musicStyle.toUpperCase()}) activada`);
+      } else {
+        SoundEngine.stopMusic();
+        showToast('Música ambiental pausada');
+      }
+    }
+
+    function spawnCoinPop(text) {
+      const layer = document.getElementById('coin-pop-layer');
+      if (!layer) return;
+      const badge = document.createElement('div');
+      badge.className = 'coin-float fixed top-20 left-1/2 px-4 py-2 rounded-full bg-amber-400 text-black font-bold text-xs shadow-2xl border border-amber-200';
+      badge.textContent = text;
+      layer.appendChild(badge);
+      setTimeout(() => badge.remove(), 1400);
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        updateHeaderStats();
+      } catch (e) {
+        showToast('Error al guardar datos locales', 'error');
+      }
+    }
+
+    // ==================== UTILITIES, LEAGUES & GAMIFICATION ====================
+    function getTodayStr() {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    function calculateBirthdayInfo(dobStr) {
+      if (!dobStr) return { formatted: 'No definida', daysLeft: 0, exactAge: state.user.age };
+      const parts = dobStr.split('-').map(Number);
+      const birthYear = parts[0], birthMonth = parts[1] - 1, birthDay = parts[2];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      let exactAge = today.getFullYear() - birthYear;
+      const mDiff = today.getMonth() - birthMonth;
+      if (mDiff < 0 || (mDiff === 0 && today.getDate() < birthDay)) {
+        exactAge--;
+      }
+
+      let nextBday = new Date(today.getFullYear(), birthMonth, birthDay);
+      if (nextBday < today) {
+        nextBday.setFullYear(today.getFullYear() + 1);
+      }
+      const diffTime = nextBday - today;
+      const daysLeft = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+      const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      const formatted = `${birthDay} de ${months[birthMonth]}`;
+      return { formatted, daysLeft, exactAge };
+    }
+
+    function getLeagueInfo(xp) {
+      let currentIdx = 0;
+      for (let i = 0; i < LEAGUES.length; i++) {
+        if (xp >= LEAGUES[i].minXp) currentIdx = i;
+      }
+      const current = LEAGUES[currentIdx];
+      const next = LEAGUES[currentIdx + 1] || null;
+      let progressPct = 100;
+      let xpIntoLeague = xp - current.minXp;
+      let xpNeededForNext = 0;
+      if (next) {
+        const span = next.minXp - current.minXp;
+        progressPct = Math.min(100, Math.max(0, Math.round((xpIntoLeague / span) * 100)));
+        xpNeededForNext = next.minXp - xp;
+      }
+      return { current, next, progressPct, xpIntoLeague, xpNeededForNext, index: currentIdx };
+    }
+
+    function getLevelInfo(xp) {
+      const level = Math.floor(xp / 100) + 1;
+      const currentLevelXp = xp % 100;
+      return { level, currentLevelXp, nextLevelXp: 100 };
+    }
+
+    function addRewards(coins, xp, reason) {
+      const prevLeague = getLeagueInfo(state.user.xp).current.id;
+      const prevLevel = getLevelInfo(state.user.xp).level;
+      state.user.coins += coins;
+      state.user.xp += xp;
+      const newLeague = getLeagueInfo(state.user.xp).current;
+      const newLevel = getLevelInfo(state.user.xp).level;
+      saveState();
+      SoundEngine.playCoin();
+      spawnCoinPop(`+${coins} 🪙 · +${xp} XP`);
+      showToast(`+${coins} 🪙 Coins · +${xp} XP (${reason})`, 'coin');
+      if (newLeague.id !== prevLeague) {
+        SoundEngine.playFanfare();
+        showToast(`¡Ascenso de Liga! Ahora eres ${newLeague.icon} Liga ${newLeague.name}`, 'coin');
+      } else if (newLevel > prevLevel) {
+        SoundEngine.playFanfare();
+        showToast(`¡Subiste al Nivel ${newLevel}!`, 'coin');
+      }
+    }
+
+    function spendCoins(amount, reason) {
+      if (state.user.coins < amount) {
+        SoundEngine.playClick(220);
+        showToast(`Te faltan ${amount - state.user.coins} 🪙 EVO Coins`, 'error');
+        return false;
+      }
+      state.user.coins -= amount;
+      saveState();
+      SoundEngine.playFanfare();
+      showToast(`-${amount} 🪙 Canjeado: ${reason}`, 'info');
+      return true;
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      let borderClass = 'border-evo-border bg-evo-card text-white';
+      if (type === 'coin') borderClass = 'border-amber-500/40 bg-zinc-900 text-amber-200';
+      if (type === 'error') borderClass = 'border-red-500/40 bg-zinc-900 text-red-300';
+
+      el.className = `pointer-events-auto px-4 py-3 rounded-2xl border shadow-xl text-xs font-medium flex items-center justify-between gap-2 animate-fade ${borderClass}`;
+      el.innerHTML = `<span>${escapeHTML(message)}</span>`;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(6px)';
+        el.style.transition = 'all 0.2s ease';
+        setTimeout(() => el.remove(), 220);
+      }, 3000);
+    }
+
+    function openModal({ title, desc, confirmText = 'Confirmar', cancelText = 'Cancelar', danger = false, onConfirm }) {
+      const backdrop = document.getElementById('modal-backdrop');
+      document.getElementById('modal-title').textContent = title;
+      document.getElementById('modal-desc').textContent = desc;
+      const actions = document.getElementById('modal-actions');
+      actions.innerHTML = '';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'px-4 py-2 rounded-xl text-xs font-medium bg-evo-surface hover:bg-zinc-800 text-zinc-300 border border-evo-border cursor-pointer';
+      cancelBtn.textContent = cancelText;
+      cancelBtn.onclick = closeModal;
+
+      const confirmBtn = document.createElement('button');
+      confirmBtn.className = danger
+        ? 'px-4 py-2 rounded-xl text-xs font-semibold bg-red-600 hover:bg-red-500 text-white cursor-pointer'
+        : 'px-4 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-zinc-200 text-black cursor-pointer';
+      confirmBtn.textContent = confirmText;
+      confirmBtn.onclick = () => {
+        closeModal();
+        if (onConfirm) onConfirm();
+      };
+
+      actions.appendChild(cancelBtn);
+      actions.appendChild(confirmBtn);
+      backdrop.classList.remove('hidden');
+      backdrop.classList.add('flex');
+    }
+
+    function closeModal() {
+      const backdrop = document.getElementById('modal-backdrop');
+      backdrop.classList.add('hidden');
+      backdrop.classList.remove('flex');
+    }
+
+    function escapeHTML(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // ==================== AUTH & ONBOARDING FLOW ====================
+    function initBoot() {
+      BgEngine.init();
+      if (!state.initialized) {
+        showScreen('setup');
+      } else {
+        showScreen('lock');
+        document.getElementById('lock-greeting').textContent = `Hola, ${state.user.name}`;
+      }
+    }
+
+    function showScreen(name) {
+      ['setup', 'lock', 'main'].forEach(s => {
+        document.getElementById(`screen-${s}`).classList.add('hidden');
+      });
+      document.getElementById(`screen-${name}`).classList.remove('hidden');
+    }
+
+    document.getElementById('setup-dob').addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (!val) return;
+      const info = calculateBirthdayInfo(val);
+      document.getElementById('setup-age').value = info.exactAge;
+      const preview = document.getElementById('setup-bday-preview');
+      preview.classList.remove('hidden');
+      document.getElementById('setup-bday-text').textContent = `${info.formatted} (en ${info.daysLeft} días)`;
+    });
+
+    document.getElementById('form-setup').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('setup-name').value.trim();
+      const dob = document.getElementById('setup-dob').value;
+      const age = parseInt(document.getElementById('setup-age').value, 10);
+      const pass = document.getElementById('setup-pass').value;
+      const confirm = document.getElementById('setup-pass-confirm').value;
+      const errEl = document.getElementById('setup-error');
+
+      if (pass !== confirm) {
+        errEl.textContent = 'Las contraseñas no coinciden.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      errEl.classList.add('hidden');
+
+      state.initialized = true;
+      state.user.name = name;
+      state.user.dob = dob;
+      state.user.age = age;
+      state.user.password = pass;
+      state.user.coins = 50;
+      saveState();
+
+      enterMainOS();
+      showToast('¡Bienvenido a EVO! +50 🪙 de bienvenida', 'coin');
+    });
+
+    document.getElementById('form-unlock').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const inputPass = document.getElementById('unlock-pass').value;
+      const errEl = document.getElementById('unlock-error');
+      if (inputPass === state.user.password) {
+        errEl.classList.add('hidden');
+        document.getElementById('unlock-pass').value = '';
+        enterMainOS();
+      } else {
+        errEl.classList.remove('hidden');
+      }
+    });
+
+    function lockApp() {
+      SoundEngine.playLock(true);
+      document.getElementById('lock-greeting').textContent = `Hola, ${state.user.name}`;
+      showScreen('lock');
+    }
+
+    function enterMainOS() {
+      SoundEngine.playLock(false);
+      showScreen('main');
+      updateHeaderStats();
+      syncAudioButtons();
+      BgEngine.syncState();
+      if (state.audio.musicEnabled) SoundEngine.startMusic();
+      navigateTo('hub');
+    }
+
+    function updateHeaderStats() {
+      document.getElementById('header-username').textContent = state.user.name || 'EVO OS';
+      const lg = getLeagueInfo(state.user.xp);
+      document.getElementById('header-league').textContent = `${lg.current.icon} Liga ${lg.current.name} · ${state.user.xp} XP`;
+      document.getElementById('header-coins').textContent = state.user.coins;
+    }
+
+    // ==================== NAVIGATION ====================
+    function navigateTo(view) {
+      SoundEngine.playClick(540);
+      currentView = view;
+      const viewport = document.getElementById('app-viewport');
+      viewport.innerHTML = '';
+
+      switch (view) {
+        case 'hub': renderHub(viewport); break;
+        case 'perfil': renderPerfil(viewport); break;
+        case 'negocios': renderNegocios(viewport); break;
+        case 'estudio': renderEstudio(viewport); break;
+        case 'deporte': renderDeporte(viewport); break;
+        case 'habitos': renderHabitos(viewport); break;
+        case 'habilidades': renderHabilidades(viewport); break;
+        case 'diario': renderDiario(viewport); break;
+        case 'misiones': renderMisiones(viewport); break;
+        case 'biblioteca': renderBiblioteca(viewport); break;
+        case 'ranking': renderRanking(viewport); break;
+        case 'juegos': renderJuegos(viewport); break;
+        case 'tienda': renderTienda(viewport); break;
+        case 'configuracion': renderConfiguracion(viewport); break;
+        default: renderHub(viewport);
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ==================== HUB VIEW (THE 13 MINI-APPS + LEAGUES) ====================
+    function renderHub(container) {
+      const today = getTodayStr();
+      const habitsDoneToday = state.apps.habitos.list.filter(h => h.lastCompleted === today).length;
+      const habitsTotal = state.apps.habitos.list.length;
+      const bday = calculateBirthdayInfo(state.user.dob);
+      const lvl = getLevelInfo(state.user.xp);
+      const lg = getLeagueInfo(state.user.xp);
+
+      const pendingQuickTasks = (state.apps.misiones.quickTasks || []).filter(t => !t.done).length;
+      const missionsDoneToday = (state.apps.misiones.dailyMissions || []).filter(m => m.lastCompleted === today).length;
+      const readingBooks = (state.apps.biblioteca.books || []).filter(b => b.status === 'reading').length;
+
+      const appsList = [
+        {
+          id: 'perfil',
+          name: 'Perfil',
+          icon: '◉',
+          desc: 'Edad, cumpleaños, liga actual y estadísticas',
+          badge: `${lg.current.icon} ${lg.current.name}`,
+          configured: true
+        },
+        {
+          id: 'misiones',
+          name: 'Misiones & Proyectos',
+          icon: '⚑',
+          desc: 'Misiones diarias, proyectos por pasos y tareas',
+          badge: `${missionsDoneToday}/${state.apps.misiones.dailyMissions.length} hoy · ${pendingQuickTasks} pend.`,
+          configured: true
+        },
+        {
+          id: 'habitos',
+          name: 'Hábitos',
+          icon: '✓',
+          desc: 'Rutina diaria, rachas, XP y monedas',
+          badge: `${habitsDoneToday}/${habitsTotal} hoy`,
+          configured: state.apps.habitos.onboarded
+        },
+        {
+          id: 'estudio',
+          name: 'Estudio',
+          icon: '◷',
+          desc: 'Pomodoro, exámenes, notas y flashcards',
+          badge: `${state.apps.estudio.pomodorosCompleted} sesiones`,
+          configured: state.apps.estudio.onboarded
+        },
+        {
+          id: 'deporte',
+          name: 'Deporte',
+          icon: '⚡',
+          desc: 'Entrenamientos, hidratación y recuperación',
+          badge: `${state.apps.deporte.sessions.length} entrenos`,
+          configured: state.apps.deporte.onboarded
+        },
+        {
+          id: 'negocios',
+          name: 'Negocios & Finanzas',
+          icon: '◈',
+          desc: 'Capital, ingresos/gastos, stock y margen',
+          badge: `${state.apps.negocios.capital}€`,
+          configured: state.apps.negocios.onboarded
+        },
+        {
+          id: 'habilidades',
+          name: 'Habilidades',
+          icon: '❖',
+          desc: 'Domina skills reales con minutos de práctica',
+          badge: `${state.apps.habilidades.list.length} activas`,
+          configured: state.apps.habilidades.onboarded
+        },
+        {
+          id: 'diario',
+          name: 'Diario / Journaling',
+          icon: '✎',
+          desc: 'Reflexión diaria, estado de ánimo y enfoque',
+          badge: `${state.apps.diario.entries.length} entradas`,
+          configured: true
+        },
+        {
+          id: 'biblioteca',
+          name: 'Biblioteca',
+          icon: '📖',
+          desc: 'Libros en lectura, páginas y notas clave',
+          badge: `${readingBooks} leyendo`,
+          configured: true
+        },
+        {
+          id: 'ranking',
+          name: 'Ranking & Ligas',
+          icon: '🏆',
+          desc: 'Clasificación por XP, ligas y amigos',
+          badge: `${lg.current.icon} ${lg.current.name}`,
+          configured: true
+        },
+        {
+          id: 'juegos',
+          name: 'Juegos',
+          icon: '🎮',
+          desc: 'Minijuegos de memoria, cálculo y reflejos',
+          badge: '3 juegos',
+          configured: true
+        },
+        {
+          id: 'tienda',
+          name: 'Tienda EVO',
+          icon: '🪙',
+          desc: 'Canjea tus EVO Coins por recompensas reales',
+          badge: `${state.user.coins} 🪙`,
+          configured: true
+        },
+        {
+          id: 'configuracion',
+          name: 'Configuración & Backup',
+          icon: '⚙',
+          desc: 'Guardar/cargar progreso, fondo, audio y clave',
+          badge: 'V1.3',
+          configured: true
+        }
+      ];
+
+      container.innerHTML = `
+        <div class="animate-fade space-y-6">
+          <!-- Hero Summary Banner -->
+          <div class="bg-evo-card border border-evo-border rounded-3xl p-6 sm:p-7 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div>
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-evo-surface border border-evo-border text-[11px] text-evo-muted mb-3">
+                <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                <span>EVO OS V1.3 · ${new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+              </div>
+              <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white">Panel Principal de ${escapeHTML(state.user.name)}</h1>
+              <p class="text-sm text-evo-muted mt-1">Gana <span class="text-emerald-400 font-medium">XP</span> para subir de Liga y <span class="text-amber-300 font-medium">EVO Coins</span> para canjear en la Tienda.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full lg:w-auto">
+              <!-- League & XP Card -->
+              <button onclick="navigateTo('ranking')" class="text-left bg-evo-surface/80 hover:bg-evo-surface border border-evo-border rounded-2xl p-4 min-w-[210px] transition cursor-pointer">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] uppercase tracking-wider text-evo-muted">Liga Actual (XP)</span>
+                  <span class="text-xs font-semibold ${lg.current.color}">${lg.current.icon} ${lg.current.name}</span>
+                </div>
+                <div class="mt-2">
+                  <div class="flex justify-between text-[11px] text-evo-muted mb-1">
+                    <span>${state.user.xp} XP · Nvl ${lvl.level}</span>
+                    <span>${lg.next ? `${lg.next.icon} ${lg.next.minXp} XP` : 'Máxima'}</span>
+                  </div>
+                  <div class="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                    <div class="h-full bg-emerald-400 rounded-full transition-all duration-300" style="width: ${lg.progressPct}%"></div>
+                  </div>
+                </div>
+              </button>
+
+              <!-- Store Coins Card -->
+              <button onclick="navigateTo('tienda')" class="text-left bg-evo-surface/80 hover:bg-evo-surface border border-evo-border rounded-2xl p-4 min-w-[190px] transition cursor-pointer">
+                <span class="text-[11px] uppercase tracking-wider text-evo-muted block">Monedas Tienda</span>
+                <span class="text-2xl font-bold text-amber-300 mt-1 block">🪙 ${state.user.coins}</span>
+                <span class="text-[11px] text-evo-muted mt-1 block">Canjear recompensas →</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 13 Mini-Apps Grid -->
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <h2 class="text-sm font-semibold uppercase tracking-wider text-evo-muted">Aplicaciones del Sistema (${appsList.length})</h2>
+              <span class="text-xs text-evo-muted">🎂 Faltan ${bday.daysLeft} días para tu cumple</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              ${appsList.map(app => `
+                <button onclick="navigateTo('${app.id}')"
+                  class="app-card text-left bg-evo-card border border-evo-border rounded-2xl p-5 flex flex-col justify-between cursor-pointer group">
+                  <div>
+                    <div class="flex items-center justify-between mb-4">
+                      <div class="w-10 h-10 rounded-xl bg-evo-surface border border-evo-border flex items-center justify-center text-lg text-white group-hover:bg-white group-hover:text-black transition">
+                        ${app.icon}
+                      </div>
+                      <span class="text-[11px] font-medium px-2.5 py-1 rounded-lg ${!app.configured ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30' : 'bg-evo-surface text-evo-muted border border-evo-border'}">
+                        ${!app.configured ? 'Configurar' : escapeHTML(app.badge)}
+                      </span>
+                    </div>
+                    <h3 class="text-base font-semibold text-white group-hover:text-white">${app.name}</h3>
+                    <p class="text-xs text-evo-muted mt-1 leading-relaxed">${app.desc}</p>
+                  </div>
+                  <div class="mt-4 pt-3 border-t border-evo-border/60 flex items-center justify-between text-[11px] text-zinc-400 group-hover:text-white">
+                    <span>Abrir módulo</span>
+                    <span>→</span>
+                  </div>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ==================== HELPER: BACK HEADER ====================
+    function appHeaderHTML(title, subtitle, icon, onResetOnboarding = null) {
+      return `
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div class="flex items-center gap-3">
+            <button onclick="navigateTo('hub')" class="px-3 py-2 rounded-xl bg-evo-card hover:bg-evo-surface border border-evo-border text-xs font-medium text-evo-muted hover:text-white transition cursor-pointer">
+              ← Inicio
+            </button>
+            <div class="w-10 h-10 rounded-xl bg-evo-card border border-evo-border flex items-center justify-center text-lg">
+              ${icon}
+            </div>
+            <div>
+              <h1 class="text-xl font-bold text-white tracking-tight">${title}</h1>
+              <p class="text-xs text-evo-muted">${subtitle}</p>
+            </div>
+          </div>
+          ${onResetOnboarding ? `
+            <button onclick="${onResetOnboarding}" class="px-3 py-1.5 rounded-xl bg-evo-surface hover:bg-zinc-800 border border-evo-border text-xs text-evo-muted hover:text-white transition cursor-pointer">
+              ✎ Reconfigurar preguntas
+            </button>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    // ==================== 1. PERFIL ====================
+    function renderPerfil(container) {
+      const bday = calculateBirthdayInfo(state.user.dob);
+      const lvl = getLevelInfo(state.user.xp);
+      const lg = getLeagueInfo(state.user.xp);
+      const p = state.apps.perfil;
+
+      container.innerHTML = `
+        <div class="animate-fade space-y-6">
+          ${appHeaderHTML('Perfil Personal', 'Identidad, liga competitiva y métricas globales en EVO', '◉')}
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="bg-evo-card border border-evo-border rounded-3xl p-6 space-y-5">
+              <div class="flex items-center gap-4">
+                <div class="w-16 h-16 rounded-2xl bg-[#0e0e12] border border-zinc-700 flex items-center justify-center shadow-lg">
+                  <svg viewBox="0 0 100 100" class="w-12 h-12">
+                    <defs>
+                      <linearGradient id="evoGradProfile" x1="0%" y1="100%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#00F0FF"/>
+                        <stop offset="52%" stop-color="#3B82F6"/>
+                        <stop offset="100%" stop-color="#8B5CF6"/>
+                      </linearGradient>
+                    </defs>
+                    <path d="M25 22 L41 22 L54 39 L71 22 L65 16 L86 14 L84 35 L78 29 L54 53 L35 31 L35 44 L50 44 L44 53 L35 53 L35 68 L62 68 L56 77 L25 77 Z" fill="url(#evoGradProfile)"/>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="text-xl font-bold text-white">${escapeHTML(state.user.name)}</h2>
+                  <p class="text-xs text-evo-muted">${bday.exactAge} años · Nivel ${lvl.level}</p>
+                  <span class="inline-block mt-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-lg border ${lg.current.badgeBg}">
+                    ${lg.current.icon} Liga ${lg.current.name}
+                  </span>
+                </div>
+              </div>
+
+              <div class="space-y-2.5 text-xs bg-evo-surface p-4 rounded-2xl border border-evo-border">
+                <div class="flex justify-between">
+                  <span class="text-evo-muted">Fecha de nacimiento:</span>
+                  <span class="text-white font-medium">${escapeHTML(state.user.dob || 'No indicada')}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-evo-muted">Cumpleaños:</span>
+                  <span class="text-white font-medium">${bday.formatted}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-evo-muted">Cuenta atrás cumple:</span>
+                  <span class="text-amber-300 font-semibold">${bday.daysLeft === 0 ? '¡Hoy es tu cumple! 🎉' : `${bday.daysLeft} días`}</span>
+                </div>
+              </div>
+
+              <form id="form-perfil-edit" class="space-y-3">
+                <div>
+                  <label class="block text-xs text-evo-muted mb-1">Tu lema o descripción</label>
+                  <input type="text" id="perfil-bio" value="${escapeHTML(p.bio)}"
+                    class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-zinc-400" />
+                </div>
+                <div>
+                  <label class="block text-xs text-evo-muted mb-1">Objetivo principal actual</label>
+                  <input type="text" id="perfil-goal" value="${escapeHTML(p.mainGoal)}"
+                    class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-zinc-400" />
+                </div>
+                <button type="submit" class="w-full bg-white hover:bg-zinc-200 text-black font-semibold text-xs py-2.5 rounded-xl transition cursor-pointer">
+                  Guardar perfil
+                </button>
+              </form>
+            </div>
+
+            <div class="lg:col-span-2 bg-evo-card border border-evo-border rounded-3xl p-6 flex flex-col justify-between space-y-6">
+              <div>
+                <h3 class="text-sm font-semibold text-white mb-4">Resumen de rendimiento en EVO</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div class="bg-evo-surface border border-evo-border rounded-2xl p-4">
+                    <span class="text-xs text-evo-muted block">Coins Tienda</span>
+                    <span class="text-xl font-bold text-amber-300 mt-1 block">🪙 ${state.user.coins}</span>
+                  </div>
+                  <div class="bg-evo-surface border border-evo-border rounded-2xl p-4">
+                    <span class="text-xs text-evo-muted block">XP Liga</span>
+                    <span class="text-xl font-bold text-emerald-400 mt-1 block">${state.user.xp} XP</span>
+                  </div>
+                  <div class="bg-evo-surface border border-evo-border rounded-2xl p-4">
+                    <span class="text-xs text-evo-muted block">Entrenos</span>
+                    <span class="text-xl font-bold text-white mt-1 block">${state.apps.deporte.sessions.length}</span>
+                  </div>
+                  <div class="bg-evo-surface border border-evo-border rounded-2xl p-4">
+                    <span class="text-xs text-evo-muted block">Libros / Diario</span>
+                    <span class="text-xl font-bold text-white mt-1 block">${state.apps.biblioteca.books.length} / ${state.apps.diario.entries.length}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-4">
+                <div class="bg-evo-surface border border-evo-border rounded-2xl p-5">
+                  <div class="flex justify-between text-xs mb-2">
+                    <span class="font-medium text-white">${lg.current.icon} Progreso de Liga: ${lg.current.name} ${lg.next ? `→ ${lg.next.icon} ${lg.next.name}` : '(Máxima)'}</span>
+                    <span class="text-emerald-400 font-semibold">${lg.next ? `Faltan ${lg.xpNeededForNext} XP` : 'Completado'}</span>
+                  </div>
+                  <div class="w-full h-2.5 bg-zinc-800 rounded-full overflow-hidden">
+                    <div class="h-full bg-emerald-400 rounded-full transition-all" style="width: ${lg.progressPct}%"></div>
+                  </div>
+                </div>
+
+                <div class="bg-evo-surface border border-evo-border rounded-2xl p-5">
+                  <div class="flex justify-between text-xs mb-2">
+                    <span class="font-medium text-white">Nivel de experiencia (${lvl.level} → ${lvl.level + 1})</span>
+                    <span class="text-evo-muted">${lvl.currentLevelXp} / 100 XP</span>
+                  </div>
+                  <div class="w-full h-2.5 bg-zinc-800 rounded-full overflow-hidden">
+                    <div class="h-full bg-white rounded-full transition-all" style="width: ${lvl.currentLevelXp}%"></div>
+                  </div>
+                  <p class="text-xs text-evo-muted mt-3">Objetivo activo: <span class="text-zinc-200">"${escapeHTML(p.mainGoal)}"</span></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('form-perfil-edit').addEventListener('submit', (e) => {
+        e.preventDefault();
+        state.apps.perfil.bio = document.getElementById('perfil-bio').value.trim();
+        state.apps.perfil.mainGoal = document.getElementById('perfil-goal').value.trim();
+        saveState();
+        showToast('Perfil actualizado correctamente');
+      });
+    }
+
+    // ==================== 2. NEGOCIOS & FINANZAS ====================
+    function renderNegocios(container) {
+      const biz = state.apps.negocios;
+
+      if (!biz.onboarded) {
+        container.innerHTML = `
+          <div class="animate-fade max-w-lg mx-auto bg-evo-card border border-evo-border rounded-3xl p-6 sm:p-8 mt-4">
+            <div class="text-2xl mb-2">◈</div>
+            <h2 class="text-xl font-bold text-white">Configurar Negocios & Finanzas</h2>
+            <p class="text-xs text-evo-muted mt-1 mb-6">Responde estas preguntas rápidas para adaptar tu panel financiero.</p>
+            <form id="form-biz-onboard" class="space-y-4">
+              <div>
+                <label class="block text-xs text-evo-muted mb-1.5">¿Con cuánto dinero o capital inicial empiezas (€)?</label>
+                <input type="number" step="0.01" id="biz-init-cap" required value="${biz.capital}" placeholder="Ej. 50"
+                  class="w-full bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-zinc-400" />
+              </div>
+              <div>
+                <label class="block text-xs text-evo-muted mb-1.5">¿Cuál es tu primera meta de ahorro o beneficio (€)?</label>
+                <input type="number" step="0.01" id="biz-init-goal" required value="${biz.financialGoal}" placeholder="Ej. 300"
+                  class="w-full bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-zinc-400" />
+              </div>
+              <div>
+                <label class="block text-xs text-evo-muted mb-1.5">Meta mensual de ingresos/beneficio (€)</label>
+                <input type="number" step="0.01" id="biz-monthly-goal" required value="${biz.monthlyGoal || 150}"
+                  class="w-full bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-zinc-400" />
+              </div>
+              <button type="submit" class="w-full bg-white hover:bg-zinc-200 text-black font-semibold text-sm py-3 rounded-xl transition cursor-pointer">
+                Guardar y entrar a Finanzas →
+              </button>
+            </form>
+          </div>
+        `;
+        document.getElementById('form-biz-onboard').addEventListener('submit', (e) => {
+          e.preventDefault();
+          biz.capital = parseFloat(document.getElementById('biz-init-cap').value) || 0;
+          biz.financialGoal = parseFloat(document.getElementById('biz-init-goal').value) || 100;
+          biz.monthlyGoal = parseFloat(document.getElementById('biz-monthly-goal').value) || 150;
+          biz.onboarded = true;
+          saveState();
+          renderNegocios(container);
+        });
+        return;
+      }
+
+      const progressPct = Math.min(100, Math.max(0, Math.round((biz.capital / (biz.financialGoal || 1)) * 100)));
+      const totalIncome = biz.transactions.filter(t => t.type === 'income').reduce((a, b) => a + b.amount, 0);
+      const totalExpense = biz.transactions.filter(t => t.type === 'expense').reduce((a, b) => a + b.amount, 0);
+      const netFlow = totalIncome - totalExpense;
+      const monthlyPct = Math.min(100, Math.max(0, Math.round((Math.max(0, netFlow) / (biz.monthlyGoal || 1)) * 100)));
+
+      const financeTips = [
+        { title: '1. Ingresos vs. Gastos', text: 'Controla exactamente qué entra y qué sale; tu margen real es lo que te hace crecer.' },
+        { title: '2. Págate a ti primero', text: 'Cuando recibas dinero, aparta antes un % fijo para ahorro/inversión antes de gastar en ocio.' },
+        { title: '3. Presupuesto por bloques', text: 'Divide tu dinero entre ahorro, proyectos/herramientas y ocio controlado.' },
+        { title: '4. Coste de oportunidad', text: 'Cada euro gastado por impulso es un euro que no puedes invertir cuando surge una buena oportunidad.' },
+        { title: '5. Interés compuesto y riesgo', text: 'La constancia multiplica resultados; nunca arriesgues dinero que no puedes permitirte perder.' }
+      ];
+
+      container.innerHTML = `
+        <div class="animate-fade space-y-6">
+          ${appHeaderHTML('Negocios & Finanzas', 'Capital, catálogo/stock, flujo neto y los 5 pilares financieros', '◈', 'resetBizOnboarding()')}
+
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-evo-card border border-evo-border rounded-2xl p-5">
+              <span class="text-xs text-evo-muted">Capital actual</span>
+              <p class="text-2xl font-bold text-white mt-1">${biz.capital.toFixed(2)} €</p>
+            </div>
+            <div class="bg-evo-card border border-evo-border rounded-2xl p-5">
+              <span class="text-xs text-evo-muted">Flujo neto registrado</span>
+              <p class="text-2xl font-bold ${netFlow >= 0 ? 'text-emerald-400' : 'text-red-400'} mt-1">${netFlow >= 0 ? '+' : ''}${netFlow.toFixed(2)} €</p>
+            </div>
+            <div class="bg-evo-card border border-evo-border rounded-2xl p-5">
+              <div class="flex justify-between text-xs text-evo-muted mb-2">
+                <span>Meta capital (${biz.financialGoal}€)</span>
+                <span class="text-white font-semibold">${progressPct}%</span>
+              </div>
+              <div class="w-full h-2.5 bg-zinc-800 rounded-full overflow-hidden mt-3">
+                <div class="h-full bg-emerald-400 rounded-full transition-all duration-500" style="width: ${progressPct}%"></div>
+              </div>
+            </div>
+            <div class="bg-evo-card border border-evo-border rounded-2xl p-5">
+              <div class="flex justify-between text-xs text-evo-muted mb-2">
+                <span>Meta mensual (${biz.monthlyGoal || 150}€)</span>
+                <span class="text-white font-semibold">${monthlyPct}%</span>
+              </div>
+              <div class="w-full h-2.5 bg-zinc-800 rounded-full overflow-hidden mt-3">
+                <div class="h-full bg-amber-400 rounded-full transition-all duration-500" style="width: ${monthlyPct}%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="bg-evo-card border border-evo-border rounded-3xl p-6 space-y-4">
+              <h3 class="text-sm font-semibold text-white">Registrar movimiento</h3>
+              <form id="form-biz-tx" class="space-y-3">
+                <div class="grid grid-cols-2 gap-2">
+                  <select id="tx-type" class="bg-evo-surface border border-evo-border rounded-xl px-3 py-2.5 text-xs text-white">
+                    <option value="income">+ Ingreso / Venta</option>
+                    <option value="expense">- Gasto / Compra</option>
+                  </select>
+                  <input type="number" step="0.01" min="0.01" id="tx-amount" required placeholder="Cantidad (€)"
+                    class="bg-evo-surface border border-evo-border rounded-xl px-3 py-2.5 text-xs text-white" />
+                </div>
+                <input type="text" id="tx-concept" required placeholder="Concepto (ej. Ahorro semanal, Venta...)"
+                  class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white" />
+                <button type="submit" class="w-full bg-white hover:bg-zinc-200 text-black font-semibold text-xs py-2.5 rounded-xl transition cursor-pointer">
+                  Añadir movimiento (+5 🪙 · +10 XP)
+                </button>
+              </form>
+
+              <div class="pt-4 border-t border-evo-border space-y-3">
+                <h4 class="text-xs font-semibold uppercase tracking-wider text-evo-muted">Calculadora de margen rápido</h4>
+                <div class="grid grid-cols-2 gap-2">
+                  <input type="number" step="0.01" id="calc-cost" placeholder="Coste (€)" oninput="calcMargin()"
+                    class="bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs text-white" />
+                  <input type="number" step="0.01" id="calc-sell" placeholder="Venta (€)" oninput="calcMargin()"
+                    class="bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs text-white" />
+                </div>
+                <div id="calc-result" class="text-xs bg-evo-surface border border-evo-border rounded-xl p-3 text-evo-muted">
+                  Introduce coste y precio de venta para ver el beneficio neto.
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-evo-card border border-evo-border rounded-3xl p-6 space-y-4">
+              <h3 class="text-sm font-semibold text-white">Productos / Ideas & Stock</h3>
+              <form id="form-biz-product" class="space-y-2">
+                <input type="text" id="prod-name" required placeholder="Nombre del producto o servicio..."
+                  class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2 text-xs text-white" />
+                <div class="grid grid-cols-3 gap-2">
+                  <input type="number" step="0.01" min="0" id="prod-cost" required placeholder="Coste €"
+                    class="bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs text-white" />
+                  <input type="number" step="0.01" min="0" id="prod-price" required placeholder="Precio €"
+                    class="bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs text-white" />
+                  <input type="number" min="0" id="prod-stock" required placeholder="Stock"
+                    class="bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs text-white" />
+                </div>
+                <button type="submit" class="w-full bg-evo-surface hover:bg-zinc-800 border border-evo-border text-white font-semibold text-xs py-2 rounded-xl transition cursor-pointer">
+                  + Guardar producto en catálogo
+                </button>
+              </form>
+
+              <div class="space-y-2 max-h-60 overflow-y-auto">
+                ${biz.products.length === 0 ? '<p class="text-xs text-evo-muted">Aún no tienes productos en tu catálogo.</p>' : ''}
+                ${biz.products.map(p => {
+                  const unitProfit = (p.price - p.cost).toFixed(2);
+                  return `
+                    <div class="bg-evo-surface border border-evo-border rounded-xl p-3 text-xs flex items-center justify-between gap-2">
+                      <div>
+                        <p class="font-semibold text-white">${escapeHTML(p.name)}</p>
+                        <span class="text-[11px] text-evo-muted">Venta ${p.price.toFixed(2)}€ · Beneficio +${unitProfit}€ · Stock: <strong class="text-white">${p.stock}</strong></span>
+                      </div>
+                      <div class="flex items-center gap-1.5">
+                        <button onclick="sellProductUnit('${p.id}')" ${p.stock <= 0 ? 'disabled' : ''}
+                          class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition cursor-pointer ${p.stock > 0 ? 'bg-emerald-400 hover:bg-emerald-300 text-black' : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'}">
+                          Vender
+                        </button>
+                        <button onclick="deleteProduct('${p.id}')" class="text-zinc-500 hover:text-red-400 px-1 cursor-pointer">✕</button>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <div class="bg-evo-card border border-evo-border rounded-3xl p-6 flex flex-col justify-between space-y-4">
+              <div>
+                <h3 class="text-sm font-semibold text-white mb-3">Historial reciente</h3>
+                <div class="space-y-2 overflow-y-auto max-h-40">
+                  ${biz.transactions.length === 0 ? '<p class="text-xs text-evo-muted">Aún no hay movimientos registrados.</p>' : ''}
+                  ${biz.transactions.slice().reverse().map(tx => `
+                    <div class="flex items-center justify-between bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2 text-xs">
+                      <div>
+                        <p class="font-medium text-white">${escapeHTML(tx.concept)}</p>
+                        <span class="text-[11px] text-evo-muted">${escapeHTML(tx.date)}</span>
+                      </div>
+                      <span class="font-semibold ${tx.type === 'income' ? 'text-emerald-400' : 'text-red-400'}">
+                        ${tx.type === 'income' ? '+' : '-'}${tx.amount.toFixed(2)} €
+                      </span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+              <div class="space-y-2 pt-3 border-t border-evo-border max-h-52 overflow-y-auto">
+                <h4 class="text-xs font-semibold text-white">5 Pilares de Finanzas</h4>
+                ${financeTips.map(t => `
+                  <div class="bg-evo-surface border border-evo-border rounded-xl p-2.5">
+                    <h5 class="text-[11px] font-semibold text-white">${t.title}</h5>
+                    <p class="text-[11px] text-evo-muted leading-snug mt-0.5">${t.text}</p>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('form-biz-tx').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const type = document.getElementById('tx-type').value;
+        const amount = parseFloat(document.getElementById('tx-amount').value);
+        const concept = document.getElementById('tx-concept').value.trim();
+        if (!amount || amount <= 0) return;
+
+        if (type === 'income') biz.capital += amount;
+        else biz.capital = Math.max(0, biz.capital - amount);
+
+        biz.transactions.push({
+          id: Date.now(),
+          type,
+          amount,
+          concept,
+          date: new Date().toLocaleDateString('es-ES')
+        });
+        addRewards(5, 10, 'Registro financiero');
+        renderNegocios(container);
+      });
+
+      document.getElementById('form-biz-product').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('prod-name').value.trim();
+        const cost = parseFloat(document.getElementById('prod-cost').value) || 0;
+        const price = parseFloat(document.getElementById('prod-price').value) || 0;
+        const stock = parseInt(document.getElementById('prod-stock').value, 10) || 0;
+        biz.products.push({ id: 'p_' + Date.now(), name, cost, price, stock });
+        saveState();
+        SoundEngine.playClick(660);
+        showToast('Producto añadido al catálogo');
+        renderNegocios(container);
+      });
+    }
+
+    function resetBizOnboarding() {
+      state.apps.negocios.onboarded = false;
+      saveState();
+      renderNegocios(document.getElementById('app-viewport'));
+    }
+
+    function sellProductUnit(id) {
+      const biz = state.apps.negocios;
+      const prod = biz.products.find(p => p.id === id);
+      if (!prod || prod.stock <= 0) return;
+      prod.stock -= 1;
+      biz.capital += prod.price;
+      biz.transactions.push({
+        id: Date.now(),
+        type: 'income',
+        amount: prod.price,
+        concept: `Venta: ${prod.name}`,
+        date: new Date().toLocaleDateString('es-ES')
+      });
+      addRewards(10, 15, `Venta de ${prod.name}`);
+      renderNegocios(document.getElementById('app-viewport'));
+    }
+
+    function deleteProduct(id) {
+      state.apps.negocios.products = state.apps.negocios.products.filter(p => p.id !== id);
+      saveState();
+      renderNegocios(document.getElementById('app-viewport'));
+    }
+
+    function calcMargin() {
+      const cost = parseFloat(document.getElementById('calc-cost').value) || 0;
+      const sell = parseFloat(document.getElementById('calc-sell').value) || 0;
+      const resEl = document.getElementById('calc-result');
+      if (cost === 0 && sell === 0) return;
+      const profit = sell - cost;
+      const margin = sell > 0 ? ((profit / sell) * 100).toFixed(1) : 0;
+      resEl.innerHTML = `Beneficio: <strong class="${profit >= 0 ? 'text-emerald-400' : 'text-red-400'}">${profit.toFixed(2)} €</strong> · Margen: <strong class="text-white">${margin}%</strong>`;
+    }
+
+    // ==================== 3. ESTUDIO ====================
+    function renderEstudio(container) {
+      const est = state.apps.estudio;
+
+      if (!est.onboarded) {
+        container.innerHTML = `
+          <div class="animate-fade max-w-lg mx-auto bg-evo-card border border-evo-border rounded-3xl p-6 sm:p-8 mt-4">
+            <div class="text-2xl mb-2">◷</div>
+            <h2 class="text-xl font-bold text-white">Configurar Estudio</h2>
+            <p class="text-xs text-evo-muted mt-1 mb-6">Define tus asignaturas principales y tu objetivo de nota.</p>
+            <form id="form-est-onboard" class="space-y-4">
+              <div>
+                <label class="block text-xs text-evo-muted mb-1.5">Asignaturas principales (separadas por comas)</label>
+                <input type="text" id="est-subjects-input" required value="${escapeHTML(est.subjects.join(', '))}"
+                  class="w-full bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-sm text-white" />
+              </div>
+              <div>
+                <label class="block text-xs text-evo-muted mb-1.5">Meta de nota media</label>
+                <input type="number" step="0.1" min="5" max="10" id="est-target-input" required value="${est.targetGrade}"
+                  class="w-full bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-sm text-white" />
+              </div>
+              <button type="submit" class="w-full bg-white hover:bg-zinc-200 text-black font-semibold text-sm py-3 rounded-xl transition cursor-pointer">
+                Guardar y abrir Estudio →
+              </button>
+            </form>
+          </div>
+        `;
+        document.getElementById('form-est-onboard').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const rawSubs = document.getElementById('est-subjects-input').value;
+          est.subjects = rawSubs.split(',').map(s => s.trim()).filter(Boolean);
+          est.targetGrade = parseFloat(document.getElementById('est-target-input').value) || 8.0;
+          est.onboarded = true;
+          saveState();
+          renderEstudio(container);
+        });
+        return;
+      }
+
+      const avgGrade = est.grades.length > 0
+        ? (est.grades.reduce((acc, g) => acc + g.score, 0) / est.grades.length).toFixed(2)
+        : '—';
+
+      container.innerHTML = `
+        <div class="animate-fade space-y-6">
+          ${appHeaderHTML('Centro de Estudio', `Meta: ${est.targetGrade} · Media: ${avgGrade} · ${est.studyMinutes || 0} min estudiados`, '◷', 'resetEstOnboarding()')}
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Pomodoro Timer -->
+            <div class="bg-evo-card border border-evo-border rounded-3xl p-6 text-center flex flex-col justify-between">
+              <div>
+                <div class="flex justify-center gap-2 mb-4">
+                  <button onclick="setPomodoroMode('focus')" class="px-3 py-1 rounded-lg text-xs font-medium ${pomodoroMode === 'focus' ? 'bg-white text-black' : 'bg-evo-surface text-evo-muted'} cursor-pointer">Enfoque (25m)</button>
+                  <button onclick="setPomodoroMode('break')" class="px-3 py-1 rounded-lg text-xs font-medium ${pomodoroMode === 'break' ? 'bg-white text-black' : 'bg-evo-surface text-evo-muted'} cursor-pointer">Descanso (5m)</button>
+                </div>
+                <div id="pomodoro-display" class="text-5xl font-bold tracking-tight text-white my-6 font-mono">
+                  ${formatSeconds(pomodoroSeconds)}
+                </div>
+                <p class="text-xs text-evo-muted mb-6">Completa un bloque de enfoque para ganar <span class="text-amber-300 font-semibold">+${state.rewardsConfig.studyPomodoro} 🪙</span> y <span class="text-emerald-400 font-semibold">+30 XP</span></p>
+              </div>
+
+              <div class="space-y-2">
+                <div class="flex gap-2">
+                  <button onclick="togglePomodoro()" id="pomodoro-btn" class="flex-1 bg-white hover:bg-zinc-200 text-black font-semibold text-xs py-3 rounded-xl transition cursor-pointer">
+                    ${pomodoroRunning ? 'Pausar' : 'Iniciar sesión'}
+                  </button>
+                  <button onclick="resetPomodoro()" class="px-4 py-3 rounded-xl bg-evo-surface hover:bg-zinc-800 border border-evo-border text-xs text-white cursor-pointer">
+                    ↺
+                  </button>
+                </div>
+                <button onclick="completePomodoroNow()" class="w-full py-2 rounded-xl bg-evo-surface hover:bg-zinc-800 border border-evo-border text-[11px] text-evo-muted hover:text-white transition cursor-pointer">
+                  ✓ Registrar bloque completado (+${state.rewardsConfig.studyPomodoro} 🪙)
+                </button>
+              </div>
+            </div>
+
+            <!-- Study Tasks -->
+            <div class="bg-evo-card border border-evo-border rounded-3xl p-6 space-y-4">
+              <h3 class="text-sm font-semibold text-white">Tareas y repasos de estudio</h3>
+              <form id="form-est-task" class="space-y-2">
+                <select id="task-subject" class="w-full bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs text-white">
+                  ${est.subjects.map(s => `<option value="${escapeHTML(s)}">${escapeHTML(s)}</option>`).join('')}
+                </select>
+                <div class="flex gap-2">
+                  <input type="text" id="task-title" required placeholder="Ej. Repasar tema 4 para el global"
+                    class="flex-1 bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs text-white" />
+                  <button type="submit" class="px-3.5 py-2 rounded-xl bg-white text-black font-semibold text-xs cursor-pointer">+</button>
+                </div>
+              </form>
+
+              <div class="space-y-2 max-h-72 overflow-y-auto">
+                ${est.tasks.length === 0 ? '<p class="text-xs text-evo-muted">Sin tareas de estudio pendientes.</p>' : ''}
+                ${est.tasks.map(t => `
+                  <div class="flex items-center justify-between bg-evo-surface border border-evo-border rounded-xl px-3 py-2.5 text-xs">
+                    <button onclick="toggleStudyTask(${t.id})" class="flex items-center gap-2.5 text-left cursor-pointer">
+                      <span class="w-4 h-4 rounded flex items-center justify-center border ${t.done ? 'bg-emerald-400 border-emerald-400 text-black font-bold' : 'border-zinc-600'}">
+                        ${t.done ? '✓' : ''}
+                      </span>
+                      <div>
+                        <p class="${t.done ? 'line-through text-zinc-500' : 'text-white font-medium'}">${escapeHTML(t.title)}</p>
+                        <span class="text-[10px] text-evo-muted">${escapeHTML(t.subject)}</span>
+                      </div>
+                    </button>
+                    <button onclick="deleteStudyTask(${t.id})" class="text-zinc-500 hover:text-red-400 px-1 cursor-pointer">✕</button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- Grades Tracker + Flashcards -->
+            <div class="bg-evo-card border border-evo-border rounded-3xl p-6 space-y-5">
+              <div>
+                <h3 class="text-sm font-semibold text-white mb-3">Registro de notas</h3>
+                <form id="form-est-grade" class="space-y-2">
+                  <select id="grade-subject" class="w-full bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs text-white">
+                    ${est.subjects.map(s => `<option value="${escapeHTML(s)}">${escapeHTML(s)}</option>`).join('')}
+                  </select>
+                  <div class="flex gap-2">
+                    <input type="text" id="grade-label" required placeholder="Examen / Global"
+                      class="flex-1 bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs text-white" />
+                    <input type="number" step="0.01" min="0" max="10" id="grade-score" required placeholder="Nota"
+                      class="w-20 bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs text-white" />
+                    <button type="submit" class="px-3 py-2 rounded-xl bg-white text-black font-semibold text-xs cursor-pointer">+</button>
+                  </div>
+                </form>
+
+                <div class="space-y-2 max-h-36 overflow-y-auto mt-3">
+                  ${est.grades.length === 0 ? '<p class="text-xs text-evo-muted">Registra tus exámenes para ver tu media.</p>' : ''}
+                  ${est.grades.slice().reverse().map(g => `
+                    <div class="flex items-center justify-between bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs">
+                      <div>
+                        <p class="font-medium text-white">${escapeHTML(g.subject)}</p>
+                        <span class="text-[10px] text-evo-muted">${escapeHTML(g.label)}</span>
+                      </div>
+                      <span class="font-bold px-2.5 py-1 rounded-lg ${g.score >= est.targetGrade ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-800 text-white'}">
+                        ${g.score.toFixed(2)}
+                      </span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+              <div class="pt-4 border-t border-evo-border space-y-2.5">
+                <h3 class="text-sm font-semibold text-white">Repaso rápido (Flashcards)</h3>
+                <form id="form-est-card" class="space-y-2">
+                  <input type="text" id="card-q" required placeholder="Pregunta o concepto clave..."
+                    class="w-full bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs text-white" />
+                  <div class="flex gap-2">
+                    <input type="text" id="card-a" required placeholder="Respuesta corta..."
+                      class="flex-1 bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs text-white" />
+                    <button type="submit" class="px-3 py-2 rounded-xl bg-white text-black font-semibold text-xs cursor-pointer">+</button>
+                  </div>
+                </form>
+                <div class="space-y-2 max-h-36 overflow-y-auto">
+                  ${(est.flashcards || []).length === 0 ? '<p class="text-xs text-evo-muted">Crea tarjetas para repasar antes de un examen.</p>' : ''}
+                  ${(est.flashcards || []).map(c => `
+                    <div class="bg-evo-surface border border-evo-border rounded-xl p-3 text-xs">
+                      <p class="font-medium text-white">❓ ${escapeHTML(c.q)}</p>
+                      <p class="text-emerald-300 mt-1">💡 ${escapeHTML(c.a)}</p>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('form-est-task').addEventListener('submit', (e) => {
+        e.preventDefault();
+        est.tasks.push({
+          id: Date.now(),
+          subject: document.getElementById('task-subject').value,
+          title: document.getElementById('task-title').value.trim(),
+          done: false
+        });
+        saveState();
+        renderEstudio(container);
+      });
+
+      document.getElementById('form-est-grade').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const score = parseFloat(document.getElementById('grade-score').value);
+        est.grades.push({
+          id: Date.now(),
+          subject: document.getElementById('grade-subject').value,
+          label: document.getElementById('grade-label').value.trim(),
+          score
+        });
+        if (score >= 7) addRewards(15, 25, 'Buena nota registrada');
+        else saveState();
+        renderEstudio(container);
+      });
+
+      document.getElementById('form-est-card').addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!est.flashcards) est.flashcards = [];
+        est.flashcards.push({
+          id: Date.now(),
+          q: document.getElementById('card-q').value.trim(),
+          a: document.getElementById('card-a').value.trim()
+        });
+        addRewards(5, 10, 'Flashcard creada');
+        renderEstudio(container);
+      });
+    }
+
+    function resetEstOnboarding() {
+      state.apps.estudio.onboarded = false;
+      saveState();
+      renderEstudio(document.getElementById('app-viewport'));
+    }
+
+    function formatSeconds(sec) {
+      const m = Math.floor(sec / 60).toString().padStart(2, '0');
+      const s = (sec % 60).toString().padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    function setPomodoroMode(mode) {
+      clearInterval(pomodoroInterval);
+      pomodoroRunning = false;
+      pomodoroMode = mode;
+      pomodoroSeconds = mode === 'focus' ? 25 * 60 : 5 * 60;
+      if (currentView === 'estudio') renderEstudio(document.getElementById('app-viewport'));
+    }
+
+    function togglePomodoro() {
+      if (pomodoroRunning) {
+        clearInterval(pomodoroInterval);
+        pomodoroRunning = false;
+      } else {
+        pomodoroRunning = true;
+        pomodoroInterval = setInterval(() => {
+          pomodoroSeconds--;
+          const disp = document.getElementById('pomodoro-display');
+          if (disp) disp.textContent = formatSeconds(pomodoroSeconds);
+          if (pomodoroSeconds <= 0) {
+            clearInterval(pomodoroInterval);
+            pomodoroRunning = false;
+            if (pomodoroMode === 'focus') {
+              completePomodoroNow();
+              setPomodoroMode('break');
+            } else {
+              showToast('Descanso terminado. ¡Vuelta al enfoque!');
+              setPomodoroMode('focus');
+            }
+          }
+        }, 1000);
+      }
+      const btn = document.getElementById('pomodoro-btn');
+      if (btn) btn.textContent = pomodoroRunning ? 'Pausar' : 'Iniciar sesión';
+    }
+
+    function resetPomodoro() {
+      setPomodoroMode(pomodoroMode);
+    }
+
+    function completePomodoroNow() {
+      state.apps.estudio.pomodorosCompleted += 1;
+      state.apps.estudio.studyMinutes = (state.apps.estudio.studyMinutes || 0) + 25;
+      addRewards(state.rewardsConfig.studyPomodoro, 30, 'Sesión de estudio');
+      if (currentView === 'estudio') renderEstudio(document.getElementById('app-viewport'));
+    }
+
+    function toggleStudyTask(id) {
+      const t = state.apps.estudio.tasks.find(x => x.id === id);
+      if (!t) return;
+      t.done = !t.done;
+      if (t.done) addRewards(10, 15, 'Tarea completada');
+      else saveState();
+      renderEstudio(document.getElementById('app-viewport'));
+    }
+
+    function deleteStudyTask(id) {
+      state.apps.estudio.tasks = state.apps.estudio.tasks.filter(x => x.id !== id);
+      saveState();
+      renderEstudio(document.getElementById('app-viewport'));
+    }
+
+    // ==================== 4. DEPORTE / ENTRENAMIENTO ====================
+    function renderDeporte(container) {
+      const dep = state.apps.deporte;
+
+      if (!dep.onboarded) {
+        container.innerHTML = `
+          <div class="animate-fade max-w-lg mx-auto bg-evo-card border border-evo-border rounded-3xl p-6 sm:p-8 mt-4">
+            <div class="text-2xl mb-2">⚡</div>
+            <h2 class="text-xl font-bold text-white">Configurar Deporte</h2>
+            <p class="text-xs text-evo-muted mt-1 mb-6">Ajusta tu frecuencia semanal y enfoque físico.</p>
+            <form id="form-dep-onboard" class="space-y-4">
+              <div>
+                <label class="block text-xs text-evo-muted mb-1.5">¿Cuántos días a la semana quieres entrenar?</label>
+                <input type="number" min="1" max="7" id="dep-goal-input" required value="${dep.weeklyGoal}"
+                  class="w-full bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-sm text-white" />
+              </div>
+              <div>
+                <label class="block text-xs text-evo-muted mb-1.5">Objetivo o deporte principal</label>
+                <input type="text" id="dep-focus-input" required value="${escapeHTML(dep.focus)}" placeholder="Ej. Máquinas y mancuernas / Basket"
+                  class="w-full bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-sm text-white" />
+              </div>
+              <button type="submit" class="w-full bg-white hover:bg-zinc-200 text-black font-semibold text-sm py-3 rounded-xl transition cursor-pointer">
+                Guardar y entrar a Deporte →
+              </button>
+            </form>
+          </div>
+        `;
+        document.getElementById('form-dep-onboard').addEventListener('submit', (e) => {
+          e.preventDefault();
+          dep.weeklyGoal = parseInt(document.getElementById('dep-goal-input').value, 10) || 3;
+          dep.focus = document.getElementById('dep-focus-input').value.trim();
+          dep.onboarded = true;
+          saveState();
+          renderDeporte(container);
+        });
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="animate-fade space-y-6">
+          ${appHeaderHTML('Deporte & Entrenamiento', `Meta: ${dep.weeklyGoal} días/semana · Enfoque: ${escapeHTML(dep.focus)}`, '⚡', 'resetDepOnboarding()')}
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="bg-evo-card border border-evo-border rounded-2xl p-5 flex items-center justify-between">
+              <div>
+                <span class="text-xs text-evo-muted">Hidratación diaria</span>
+                <p class="text-xl font-bold text-sky-300 mt-0.5">💧 ${dep.waterGlasses || 0} / 8 vasos</p>
+              </div>
+              <button onclick="addWaterGlass()" class="px-4 py-2.5 rounded-xl bg-sky-400 hover:bg-sky-300 text-black font-semibold text-xs transition cursor-pointer">
+                +1 Vaso (+3 🪙)
+              </button>
+            </div>
+            <div class="bg-evo-card border border-evo-border rounded-2xl p-5">
+              <div class="flex justify-between text-xs mb-2">
+                <span class="text-evo-muted">Nivel de energía / recuperación</span>
+                <span class="font-bold text-white">${dep.recoveryScore || 8}/10</span>
+              </div>
+              <input type="range" min="1" max="10" value="${dep.recoveryScore || 8}" onchange="updateRecovery(this.value)"
+                class="w-full accent-white cursor-pointer" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="bg-evo-card border border-evo-border rounded-3xl p-6 space-y-4">
+              <h3 class="text-sm font-semibold text-white">Registrar entrenamiento</h3>
+              <form id="form-dep-log" class="space-y-3">
+                <div>
+                  <label class="block text-xs text-evo-muted mb-1">Tipo de sesión</label>
+                  <select id="dep-type" class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white">
+                    <option value="Gimnasio (Máquinas y Mancuernas)">Gimnasio (Máquinas y Mancuernas)</option>
+                    <option value="Cardio / Resistencia">Cardio / Resistencia</option>
+                    <option value="Baloncesto / Deporte">Baloncesto / Deporte</option>
+                    <option value="Sombra técnica / Boxeo">Sombra técnica / Boxeo</option>
+                  </select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-xs text-evo-muted mb-1">Duración (min)</label>
+                    <input type="number" min="10" max="240" id="dep-duration" required value="50"
+                      class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white" />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-evo-muted mb-1">Series / Rounds</label>
+                    <input type="number" min="1" max="50" id="dep-sets" value="12"
+                      class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white" />
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs text-evo-muted mb-1">Notas rápidas</label>
+                  <input type="text" id="dep-notes" placeholder="Ej. Subí carga en máquina de pecho y remo"
+                    class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white" />
+                </div>
+                <button type="submit" class="w-full bg-white hover:bg-zinc-200 text-black font-semibold text-xs py-3 rounded-xl transition cursor-pointer">
+                  Completar entreno (+${state.rewardsConfig.workout} 🪙 · +40 XP)
+                </button>
+              </form>
+            </div>
+
+            <div class="lg:col-span-2 bg-evo-card border border-evo-border rounded-3xl p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-semibold text-white">Historial de sesiones (${dep.sessions.length})</h3>
+                <span class="text-xs text-emerald-400 font-medium">+${state.rewardsConfig.workout} 🪙 · +40 XP</span>
+              </div>
+              <div class="space-y-2.5 max-h-96 overflow-y-auto">
+                ${dep.sessions.length === 0 ? '<p class="text-xs text-evo-muted">Todavía no has registrado ningún entrenamiento.</p>' : ''}
+                ${dep.sessions.slice().reverse().map(s => `
+                  <div class="bg-evo-surface border border-evo-border rounded-2xl p-4 flex items-center justify-between">
+                    <div>
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs font-semibold text-white">${escapeHTML(s.type)}</span>
+                        <span class="text-[11px] px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300">${s.duration} min</span>
+                        ${s.sets ? `<span class="text-[11px] px-2 py-0.5 rounded-md bg-zinc-800 text-amber-300">${s.sets} series</span>` : ''}
+                      </div>
+                      ${s.notes ? `<p class="text-xs text-evo-muted mt-1">${escapeHTML(s.notes)}</p>` : ''}
+                    </div>
+                    <span class="text-[11px] text-evo-muted">${escapeHTML(s.date)}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('form-dep-log').addEventListener('submit', (e) => {
+        e.preventDefault();
+        dep.sessions.push({
+          id: Date.now(),
+          type: document.getElementById('dep-type').value,
+          duration: parseInt(document.getElementById('dep-duration').value, 10) || 45,
+          sets: parseInt(document.getElementById('dep-sets').value, 10) || 12,
+          notes: document.getElementById('dep-notes').value.trim(),
+          date: new Date().toLocaleDateString('es-ES')
+        });
+        addRewards(state.rewardsConfig.workout, 40, 'Entrenamiento completado');
+        renderDeporte(container);
+      });
+    }
+
+    function resetDepOnboarding() {
+      state.apps.deporte.onboarded = false;
+      saveState();
+      renderDeporte(document.getElementById('app-viewport'));
+    }
+
+    function addWaterGlass() {
+      state.apps.deporte.waterGlasses = (state.apps.deporte.waterGlasses || 0) + 1;
+      addRewards(3, 5, 'Hidratación');
+      renderDeporte(document.getElementById('app-viewport'));
+    }
+
+    function updateRecovery(val) {
+      state.apps.deporte.recoveryScore = parseInt(val, 10) || 8;
+      saveState();
+      SoundEngine.playClick(480);
+      renderDeporte(document.getElementById('app-viewport'));
+    }
+
+    // ==================== 5. HÁBITOS ====================
+    function renderHabitos(container) {
+      const hab = state.apps.habitos;
+      const today = getTodayStr();
+
+      if (!hab.onboarded) {
+        container.innerHTML = `
+          <div class="animate-fade max-w-lg mx-auto bg-evo-card border border-evo-border rounded-3xl p-6 sm:p-8 mt-4">
+            <div class="text-2xl mb-2">✓</div>
+            <h2 class="text-xl font-bold text-white">Configurar tus Hábitos</h2>
+            <p class="text-xs text-evo-muted mt-1 mb-6">Elige 3 hábitos diarios clave para empezar a sumar rachas, XP y monedas.</p>
+            <form id="form-hab-onboard" class="space-y-3">
+              <input type="text" id="hab-1" required value="Beber 2L de agua" placeholder="Hábito 1"
+                class="w-full bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-sm text-white" />
+              <input type="text" id="hab-2" required value="Rutina facial / cuidado personal" placeholder="Hábito 2"
+                class="w-full bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-sm text-white" />
+              <input type="text" id="hab-3" required value="Leer o estudiar 30 min sin móvil" placeholder="Hábito 3"
+                class="w-full bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-sm text-white" />
+              <button type="submit" class="w-full mt-2 bg-white hover:bg-zinc-200 text-black font-semibold text-sm py-3 rounded-xl transition cursor-pointer">
+                Crear mis hábitos →
+              </button>
+            </form>
+          </div>
+        `;
+        document.getElementById('form-hab-onboard').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const items = [
+            document.getElementById('hab-1').value.trim(),
+            document.getElementById('hab-2').value.trim(),
+            document.getElementById('hab-3').value.trim()
+          ].filter(Boolean);
+
+          hab.list = items.map((title, idx) => ({
+            id: Date.now() + idx,
+            title,
+            category: idx === 0 ? 'Salud' : idx === 1 ? 'Cuidado' : 'Mente',
+            streak: 0,
+            lastCompleted: null
+          }));
+          hab.onboarded = true;
+          saveState();
+          renderHabitos(container);
+        });
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="animate-fade space-y-6">
+          ${appHeaderHTML('Hábitos Diarios', `Cada hábito completado hoy suma +${state.rewardsConfig.habit} 🪙 y +15 XP`, '✓', 'resetHabOnboarding()')}
+
+          <div class="bg-evo-card border border-evo-border rounded-3xl p-6 space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <form id="form-add-habit" class="flex flex-1 min-w-[240px] gap-2">
+                <select id="new-habit-cat" class="bg-evo-surface border border-evo-border rounded-xl px-3 py-3 text-xs text-white">
+                  <option value="Salud">Salud</option>
+                  <option value="Mente">Mente</option>
+                  <option value="Estudio">Estudio</option>
+                  <option value="Orden">Orden</option>
+                </select>
+                <input type="text" id="new-habit-title" required placeholder="Añadir nuevo hábito diario..."
+                  class="flex-1 bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-zinc-400" />
+                <button type="submit" class="px-5 py-3 rounded-xl bg-white hover:bg-zinc-200 text-black font-semibold text-xs transition cursor-pointer">
+                  + Añadir
+                </button>
+              </form>
+
+              <button onclick="completeAllHabitsToday()" class="px-4 py-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-semibold transition cursor-pointer">
+                ✓ Completar todos hoy
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              ${hab.list.length === 0 ? '<p class="text-xs text-evo-muted">No tienes hábitos creados todavía.</p>' : ''}
+              ${hab.list.map(h => {
+                const doneToday = h.lastCompleted === today;
+                return `
+                  <div class="flex items-center justify-between p-4 rounded-2xl border transition ${doneToday ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-evo-surface border-evo-border'}">
+                    <div class="flex items-center gap-3">
+                      <button onclick="toggleHabit(${h.id})"
+                        class="w-7 h-7 rounded-xl flex items-center justify-center text-xs font-bold border transition cursor-pointer ${doneToday ? 'bg-emerald-400 text-black border-emerald-400' : 'bg-zinc-900 text-transparent border-zinc-600 hover:border-white'}">
+                        ✓
+                      </button>
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <p class="text-sm font-medium ${doneToday ? 'text-emerald-200' : 'text-white'}">${escapeHTML(h.title)}</p>
+                          <span class="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-evo-muted">${escapeHTML(h.category || 'General')}</span>
+                        </div>
+                        <span class="text-[11px] text-evo-muted">🔥 Racha: ${h.streak} día${h.streak === 1 ? '' : 's'}</span>
+                      </div>
+                    </div>
+                    <button onclick="deleteHabit(${h.id})" class="text-zinc-500 hover:text-red-400 text-xs p-1 cursor-pointer">✕</button>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('form-add-habit').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const title = document.getElementById('new-habit-title').value.trim();
+        const category = document.getElementById('new-habit-cat').value;
+        if (!title) return;
+        hab.list.push({ id: Date.now(), title, category, streak: 0, lastCompleted: null });
+        saveState();
+        renderHabitos(container);
+      });
+    }
+
+    function resetHabOnboarding() {
+      state.apps.habitos.onboarded = false;
+      saveState();
+      renderHabitos(document.getElementById('app-viewport'));
+    }
+
+    function completeAllHabitsToday() {
+      const today = getTodayStr();
+      let completedCount = 0;
+      state.apps.habitos.list.forEach(h => {
+        if (h.lastCompleted !== today) {
+          h.lastCompleted = today;
+          h.streak += 1;
+          completedCount++;
+        }
+      });
+      if (completedCount === 0) {
+        showToast('Todos los hábitos de hoy ya estaban completados');
+        return;
+      }
+      addRewards(completedCount * state.rewardsConfig.habit, completedCount * 15, `${completedCount} hábitos completados`);
+      renderHabitos(document.getElementById('app-viewport'));
+    }
+
+    function toggleHabit(id) {
+      const h = state.apps.habitos.list.find(x => x.id === id);
+      if (!h) return;
+      const today = getTodayStr();
+      if (h.lastCompleted === today) {
+        showToast('Este hábito ya está completado hoy');
+        return;
+      }
+      h.lastCompleted = today;
+      h.streak += 1;
+      addRewards(state.rewardsConfig.habit, 15, `Hábito: ${h.title}`);
+      renderHabitos(document.getElementById('app-viewport'));
+    }
+
+    function deleteHabit(id) {
+      state.apps.habitos.list = state.apps.habitos.list.filter(x => x.id !== id);
+      saveState();
+      renderHabitos(document.getElementById('app-viewport'));
+    }
+
+    // ==================== 6. HABILIDADES ====================
+    function renderHabilidades(container) {
+      const sk = state.apps.habilidades;
+
+      if (!sk.onboarded) {
+        container.innerHTML = `
+          <div class="animate-fade max-w-lg mx-auto bg-evo-card border border-evo-border rounded-3xl p-6 sm:p-8 mt-4">
+            <div class="text-2xl mb-2">❖</div>
+            <h2 class="text-xl font-bold text-white">Configurar Habilidades</h2>
+            <p class="text-xs text-evo-muted mt-1 mb-6">¿Qué habilidades quieres subir de nivel en la vida real?</p>
+            <form id="form-sk-onboard" class="space-y-4">
+              <div>
+                <label class="block text-xs text-evo-muted mb-1.5">Habilidades iniciales (separadas por comas)</label>
+                <input type="text" id="sk-init-input" required value="Programación & IA, Finanzas, Edición de vídeo"
+                  class="w-full bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-sm text-white" />
+              </div>
+              <button type="submit" class="w-full bg-white hover:bg-zinc-200 text-black font-semibold text-sm py-3 rounded-xl transition cursor-pointer">
+                Desbloquear árbol de habilidades →
+              </button>
+            </form>
+          </div>
+        `;
+        document.getElementById('form-sk-onboard').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const names = document.getElementById('sk-init-input').value.split(',').map(s => s.trim()).filter(Boolean);
+          sk.list = names.map((name, i) => ({ id: Date.now() + i, name, xp: 0, minutes: 0 }));
+          sk.onboarded = true;
+          saveState();
+          renderHabilidades(container);
+        });
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="animate-fade space-y-6">
+          ${appHeaderHTML('Habilidades', `Practica y suma minutos para subir nivel · +${state.rewardsConfig.skillPractice} 🪙 por sesión`, '❖', 'resetSkOnboarding()')}
+
+          <div class="bg-evo-card border border-evo-border rounded-3xl p-6 space-y-5">
+            <form id="form-add-skill" class="flex gap-2">
+              <input type="text" id="new-skill-name" required placeholder="Nueva habilidad (ej. Inglés hablado, Diseño, Oratoria...)"
+                class="flex-1 bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-xs text-white" />
+              <button type="submit" class="px-5 py-3 rounded-xl bg-white hover:bg-zinc-200 text-black font-semibold text-xs cursor-pointer">
+                + Añadir
+              </button>
+            </form>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              ${sk.list.map(item => {
+                const lvl = Math.floor(item.xp / 100) + 1;
+                const pct = item.xp % 100;
+                const mins = item.minutes || 0;
+                return `
+                  <div class="bg-evo-surface border border-evo-border rounded-2xl p-5 flex flex-col justify-between space-y-4">
+                    <div>
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-semibold text-amber-300">Nivel ${lvl} · ${mins} min</span>
+                        <button onclick="deleteSkill(${item.id})" class="text-zinc-500 hover:text-red-400 text-xs cursor-pointer">✕</button>
+                      </div>
+                      <h3 class="text-base font-bold text-white">${escapeHTML(item.name)}</h3>
+                      <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden mt-3">
+                        <div class="h-full bg-white rounded-full transition-all" style="width: ${pct}%"></div>
+                      </div>
+                      <span class="text-[11px] text-evo-muted mt-1 block">${pct} / 100 XP de habilidad</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                      <button onclick="practiceSkill(${item.id}, 20)"
+                        class="py-2.5 rounded-xl bg-evo-card hover:bg-zinc-800 border border-evo-border text-white font-semibold text-xs transition cursor-pointer">
+                        +20 min
+                      </button>
+                      <button onclick="practiceSkill(${item.id}, 45)"
+                        class="py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-black font-semibold text-xs transition cursor-pointer">
+                        +45 min (+${state.rewardsConfig.skillPractice} 🪙)
+                      </button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('form-add-skill').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('new-skill-name').value.trim();
+        if (!name) return;
+        sk.list.push({ id: Date.now(), name, xp: 0, minutes: 0 });
+        saveState();
+        renderHabilidades(container);
+      });
+    }
+
+    function resetSkOnboarding() {
+      state.apps.habilidades.onboarded = false;
+      saveState();
+      renderHabilidades(document.getElementById('app-viewport'));
+    }
+
+    function practiceSkill(id, mins = 25) {
+      const s = state.apps.habilidades.list.find(x => x.id === id);
+      if (!s) return;
+      s.minutes = (s.minutes || 0) + mins;
+      s.xp += mins >= 40 ? 45 : 25;
+      const coinBonus = mins >= 40 ? state.rewardsConfig.skillPractice : Math.max(10, Math.round(state.rewardsConfig.skillPractice * 0.6));
+      addRewards(coinBonus, mins >= 40 ? 35 : 20, `${s.name} (+${mins}m)`);
+      renderHabilidades(document.getElementById('app-viewport'));
+    }
+
+    function deleteSkill(id) {
+      state.apps.habilidades.list = state.apps.habilidades.list.filter(x => x.id !== id);
+      saveState();
+      renderHabilidades(document.getElementById('app-viewport'));
+    }
+
+    // ==================== 7. DIARIO / JOURNALING ====================
+    function renderDiario(container) {
+      const diario = state.apps.diario;
+      const moods = [
+        { val: 1, icon: '😫', label: 'Bajo' },
+        { val: 2, icon: '😕', label: 'Regular' },
+        { val: 3, icon: '😐', label: 'Normal' },
+        { val: 4, icon: '🙂', label: 'Bien' },
+        { val: 5, icon: '🔥', label: 'A tope' }
+      ];
+
+      container.innerHTML = `
+        <div class="animate-fade space-y-6">
+          ${appHeaderHTML('Diario & Journaling', 'Claridad mental, gratitud y mejora continua (+15 🪙 · +20 XP)', '✎')}
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-evo-card border border-evo-border rounded-3xl p-6 space-y-4">
+              <h3 class="text-sm font-semibold text-white">Nueva entrada de hoy</h3>
+              <form id="form-journal-add" class="space-y-4">
+                <div>
+                  <label class="block text-xs text-evo-muted mb-2">¿Cómo está tu energía y enfoque hoy?</label>
+                  <div class="grid grid-cols-5 gap-2">
+                    ${moods.map(m => `
+                      <label class="cursor-pointer">
+                        <input type="radio" name="journal-mood" value="${m.val}" ${m.val === 4 ? 'checked' : ''} class="peer hidden" />
+                        <div class="peer-checked:bg-white peer-checked:text-black peer-checked:border-white bg-evo-surface border border-evo-border rounded-xl p-2.5 text-center transition">
+                          <span class="text-lg block">${m.icon}</span>
+                          <span class="text-[10px] font-medium block mt-0.5">${m.label}</span>
+                        </div>
+                      </label>
+                    `).join('')}
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-evo-muted mb-1">¿Qué salió bien hoy?</label>
+                    <input type="text" id="j-good" required placeholder="Ej. Estudié concentrado 2 horas..."
+                      class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white" />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-evo-muted mb-1">¿Qué puedo mejorar mañana?</label>
+                    <input type="text" id="j-improve" required placeholder="Ej. Dejar el móvil lejos al empezar..."
+                      class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white" />
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs text-evo-muted mb-1">Nota libre / Reflexión / Gratitud</label>
+                  <textarea id="j-note" rows="3" placeholder="Escribe tus pensamientos, aprendizajes o ideas del día..."
+                    class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-zinc-400"></textarea>
+                </div>
+
+                <button type="submit" class="w-full bg-white hover:bg-zinc-200 text-black font-semibold text-xs py-3 rounded-xl transition cursor-pointer">
+                  Guardar entrada en Diario (+15 🪙 · +20 XP)
+                </button>
+              </form>
+            </div>
+
+            <div class="bg-evo-card border border-evo-border rounded-3xl p-6 space-y-3">
+              <h3 class="text-sm font-semibold text-white">Archivo reciente (${diario.entries.length})</h3>
+              <div class="space-y-3 max-h-[430px] overflow-y-auto">
+                ${diario.entries.length === 0 ? '<p class="text-xs text-evo-muted">Aún no has escrito ninguna entrada en tu diario.</p>' : ''}
+                ${diario.entries.slice().reverse().map(entry => {
+                  const mObj = moods.find(x => x.val === entry.mood) || moods[3];
+                  return `
+                    <div class="bg-evo-surface border border-evo-border rounded-2xl p-4 space-y-2 text-xs">
+                      <div class="flex items-center justify-between">
+                        <span class="font-semibold text-white">${mObj.icon} ${escapeHTML(entry.date)}</span>
+                        <button onclick="deleteJournalEntry(${entry.id})" class="text-zinc-500 hover:text-red-400 cursor-pointer">✕</button>
+                      </div>
+                      <p class="text-emerald-300"><strong class="text-zinc-400 font-normal">Bien:</strong> ${escapeHTML(entry.good)}</p>
+                      <p class="text-amber-300"><strong class="text-zinc-400 font-normal">Mejorar:</strong> ${escapeHTML(entry.improve)}</p>
+                      ${entry.note ? `<p class="text-zinc-300 pt-1 border-t border-evo-border/60">${escapeHTML(entry.note)}</p>` : ''}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('form-journal-add').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const moodVal = parseInt(document.querySelector('input[name="journal-mood"]:checked')?.value || '4', 10);
+        diario.entries.push({
+          id: Date.now(),
+          date: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+          mood: moodVal,
+          good: document.getElementById('j-good').value.trim(),
+          improve: document.getElementById('j-improve').value.trim(),
+          note: document.getElementById('j-note').value.trim()
+        });
+        addRewards(15, 20, 'Entrada de Diario');
+        renderDiario(container);
+      });
+    }
+
+    function deleteJournalEntry(id) {
+      state.apps.diario.entries = state.apps.diario.entries.filter(x => x.id !== id);
+      saveState();
+      renderDiario(document.getElementById('app-viewport'));
+    }
+
+    // ==================== 8. MISIONES, PROYECTOS Y TAREAS ====================
+    function renderMisiones(container) {
+      const mis = state.apps.misiones;
+      const today = getTodayStr();
+
+      container.innerHTML = `
+        <div class="animate-fade space-y-6">
+          ${appHeaderHTML('Misiones, Proyectos y Tareas', 'Cumple misiones de alto impacto, avanza proyectos y despeja tareas', '⚑')}
+
+          <div class="bg-evo-card border border-evo-border rounded-3xl p-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-white">⚡ Misiones Diarias (Recompensa doble XP + Coins)</h3>
+              <span class="text-xs text-evo-muted">Se reinician cada día</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              ${mis.dailyMissions.map(m => {
+                const done = m.lastCompleted === today;
+                return `
+                  <div class="p-4 rounded-2xl border flex flex-col justify-between gap-3 ${done ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-evo-surface border-evo-border'}">
+                    <div>
+                      <div class="flex items-center justify-between text-[11px] mb-1.5">
+                        <span class="text-emerald-400 font-semibold">+${m.xp} XP</span>
+                        <span class="text-amber-300 font-semibold">+${m.coins} 🪙</span>
+                      </div>
+                      <p class="text-xs font-medium ${done ? 'text-emerald-200 line-through' : 'text-white'}">${escapeHTML(m.title)}</p>
+                    </div>
+                    <button onclick="completeDailyMission('${m.id}')" ${done ? 'disabled' : ''}
+                      class="w-full py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${done ? 'bg-emerald-500/20 text-emerald-300 cursor-default' : 'bg-white hover:bg-zinc-200 text-black'}">
+                      ${done ? '✓ Misión cumplida' : 'Reclamar misión'}
+                    </button>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-evo-card border border-evo-border rounded-3xl p-6 space-y-4">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 class="text-sm font-semibold text-white">Proyectos Activos (${mis.projects.length})</h3>
+              </div>
+
+              <form id="form-project-add" class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                <input type="text" id="proj-title" required placeholder="Nuevo proyecto (ej. App EVO, Subir notas...)"
+                  class="sm:col-span-2 bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white" />
+                <input type="text" id="proj-deadline" placeholder="Plazo (ej. Este mes)"
+                  class="bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white" />
+                <button type="submit" class="bg-white hover:bg-zinc-200 text-black font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                  + Proyecto
+                </button>
+              </form>
+
+              <div class="space-y-4">
+                ${mis.projects.length === 0 ? '<p class="text-xs text-evo-muted">No tienes proyectos activos. Crea uno arriba.</p>' : ''}
+                ${mis.projects.map(proj => {
+                  const total = proj.subtasks.length;
+                  const doneCount = proj.subtasks.filter(s => s.done).length;
+                  const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+                  return `
+                    <div class="bg-evo-surface border border-evo-border rounded-2xl p-4 space-y-3">
+                      <div class="flex items-center justify-between gap-2">
+                        <div>
+                          <h4 class="text-sm font-semibold text-white">${escapeHTML(proj.title)}</h4>
+                          <span class="text-[11px] text-evo-muted">Plazo: ${escapeHTML(proj.deadline || 'Abierto')} · ${doneCount}/${total} pasos (${pct}%)</span>
+                        </div>
+                        <button onclick="deleteProject('${proj.id}')" class="text-zinc-500 hover:text-red-400 text-xs cursor-pointer">✕</button>
+                      </div>
+                      <div class="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div class="h-full bg-cyan-400 rounded-full transition-all" style="width: ${pct}%"></div>
+                      </div>
+                      <div class="space-y-1.5">
+                        ${proj.subtasks.map(st => `
+                          <button onclick="toggleProjectSubtask('${proj.id}', '${st.id}')" class="w-full flex items-center gap-2 text-left text-xs py-1 px-2 rounded-lg hover:bg-zinc-800/70 cursor-pointer">
+                            <span class="w-4 h-4 rounded flex items-center justify-center border ${st.done ? 'bg-cyan-400 border-cyan-400 text-black font-bold' : 'border-zinc-600'}">
+                              ${st.done ? '✓' : ''}
+                            </span>
+                            <span class="${st.done ? 'line-through text-zinc-500' : 'text-zinc-200'}">${escapeHTML(st.title)}</span>
+                          </button>
+                        `).join('')}
+                      </div>
+                      <form onsubmit="addProjectSubtask(event, '${proj.id}')" class="flex gap-2 pt-1">
+                        <input type="text" id="sub-input-${proj.id}" required placeholder="Añadir paso o subtarea..."
+                          class="flex-1 bg-evo-card border border-evo-border rounded-xl px-3 py-1.5 text-xs text-white" />
+                        <button type="submit" class="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-medium cursor-pointer">+ Paso</button>
+                      </form>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <div class="bg-evo-card border border-evo-border rounded-3xl p-6 space-y-4">
+              <h3 class="text-sm font-semibold text-white">Tareas Rápidas</h3>
+              <form id="form-quick-task" class="space-y-2">
+                <input type="text" id="qt-title" required placeholder="Tarea pendiente..."
+                  class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white" />
+                <div class="flex gap-2">
+                  <select id="qt-priority" class="flex-1 bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs text-white">
+                    <option value="Alta">🔴 Prioridad Alta</option>
+                    <option value="Media" selected>🟡 Prioridad Media</option>
+                    <option value="Baja">🟢 Prioridad Baja</option>
+                  </select>
+                  <button type="submit" class="px-4 py-2 rounded-xl bg-white text-black font-semibold text-xs cursor-pointer">+ Añadir</button>
+                </div>
+              </form>
+
+              <div class="space-y-2 max-h-96 overflow-y-auto">
+                ${mis.quickTasks.length === 0 ? '<p class="text-xs text-evo-muted">Bandeja de tareas vacía.</p>' : ''}
+                ${mis.quickTasks.map(qt => {
+                  const badgeColor = qt.priority === 'Alta' ? 'text-red-400 bg-red-500/10' : qt.priority === 'Media' ? 'text-amber-300 bg-amber-500/10' : 'text-emerald-400 bg-emerald-500/10';
+                  return `
+                    <div class="flex items-center justify-between bg-evo-surface border border-evo-border rounded-xl px-3 py-2.5 text-xs">
+                      <button onclick="toggleQuickTask(${qt.id})" class="flex items-center gap-2.5 text-left cursor-pointer">
+                        <span class="w-4 h-4 rounded flex items-center justify-center border ${qt.done ? 'bg-emerald-400 border-emerald-400 text-black font-bold' : 'border-zinc-600'}">
+                          ${qt.done ? '✓' : ''}
+                        </span>
+                        <div>
+                          <p class="${qt.done ? 'line-through text-zinc-500' : 'text-white font-medium'}">${escapeHTML(qt.title)}</p>
+                          <span class="text-[10px] px-1.5 py-0.5 rounded ${badgeColor}">${escapeHTML(qt.priority)}</span>
+                        </div>
+                      </button>
+                      <button onclick="deleteQuickTask(${qt.id})" class="text-zinc-500 hover:text-red-400 px-1 cursor-pointer">✕</button>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('form-project-add').addEventListener('submit', (e) => {
+        e.preventDefault();
+        mis.projects.push({
+          id: 'proj_' + Date.now(),
+          title: document.getElementById('proj-title').value.trim(),
+          deadline: document.getElementById('proj-deadline').value.trim() || 'Sin fecha',
+          subtasks: []
+        });
+        saveState();
+        renderMisiones(container);
+      });
+
+      document.getElementById('form-quick-task').addEventListener('submit', (e) => {
+        e.preventDefault();
+        mis.quickTasks.push({
+          id: Date.now(),
+          title: document.getElementById('qt-title').value.trim(),
+          priority: document.getElementById('qt-priority').value,
+          done: false
+        });
+        saveState();
+        renderMisiones(container);
+      });
+    }
+
+    function completeDailyMission(id) {
+      const m = state.apps.misiones.dailyMissions.find(x => x.id === id);
+      if (!m) return;
+      const today = getTodayStr();
+      if (m.lastCompleted === today) return;
+      m.lastCompleted = today;
+      addRewards(m.coins, m.xp, `Misión: ${m.title}`);
+      renderMisiones(document.getElementById('app-viewport'));
+    }
+
+    function addProjectSubtask(e, projId) {
+      e.preventDefault();
+      const input = document.getElementById(`sub-input-${projId}`);
+      const title = input.value.trim();
+      if (!title) return;
+      const proj = state.apps.misiones.projects.find(p => p.id === projId);
+      if (!proj) return;
+      proj.subtasks.push({ id: 'st_' + Date.now(), title, done: false });
+      saveState();
+      renderMisiones(document.getElementById('app-viewport'));
+    }
+
+    function toggleProjectSubtask(projId, stId) {
+      const proj = state.apps.misiones.projects.find(p => p.id === projId);
+      if (!proj) return;
+      const st = proj.subtasks.find(s => s.id === stId);
+      if (!st) return;
+      st.done = !st.done;
+      if (st.done) addRewards(10, 15, 'Paso de proyecto completado');
+      else saveState();
+      renderMisiones(document.getElementById('app-viewport'));
+    }
+
+    function deleteProject(projId) {
+      state.apps.misiones.projects = state.apps.misiones.projects.filter(p => p.id !== projId);
+      saveState();
+      renderMisiones(document.getElementById('app-viewport'));
+    }
+
+    function toggleQuickTask(id) {
+      const qt = state.apps.misiones.quickTasks.find(x => x.id === id);
+      if (!qt) return;
+      qt.done = !qt.done;
+      if (qt.done) addRewards(8, 10, 'Tarea completada');
+      else saveState();
+      renderMisiones(document.getElementById('app-viewport'));
+    }
+
+    function deleteQuickTask(id) {
+      state.apps.misiones.quickTasks = state.apps.misiones.quickTasks.filter(x => x.id !== id);
+      saveState();
+      renderMisiones(document.getElementById('app-viewport'));
+    }
+
+    // ==================== 9. BIBLIOTECA (LIBROS) ====================
+    function renderBiblioteca(container) {
+      const bib = state.apps.biblioteca;
+
+      container.innerHTML = `
+        <div class="animate-fade space-y-6">
+          ${appHeaderHTML('Biblioteca Personal', 'Control de lectura, progreso por páginas e ideas clave', '📖')}
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="bg-evo-card border border-evo-border rounded-3xl p-6 space-y-4">
+              <h3 class="text-sm font-semibold text-white">Añadir libro</h3>
+              <form id="form-book-add" class="space-y-3">
+                <input type="text" id="book-title" required placeholder="Título del libro"
+                  class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white" />
+                <input type="text" id="book-author" required placeholder="Autor"
+                  class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white" />
+                <div class="grid grid-cols-2 gap-2">
+                  <select id="book-status" class="bg-evo-surface border border-evo-border rounded-xl px-3 py-2.5 text-xs text-white">
+                    <option value="reading">Leyendo ahora</option>
+                    <option value="wishlist">Por leer</option>
+                    <option value="completed">Completado</option>
+                  </select>
+                  <input type="number" min="1" id="book-total" required placeholder="Páginas totales"
+                    class="bg-evo-surface border border-evo-border rounded-xl px-3 py-2.5 text-xs text-white" />
+                </div>
+                <textarea id="book-notes" rows="2" placeholder="Idea principal o nota (opcional)..."
+                  class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2 text-xs text-white"></textarea>
+                <button type="submit" class="w-full bg-white hover:bg-zinc-200 text-black font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                  + Guardar en Biblioteca
+                </button>
+              </form>
+            </div>
+
+            <div class="lg:col-span-2 bg-evo-card border border-evo-border rounded-3xl p-6 space-y-4">
+              <h3 class="text-sm font-semibold text-white">Estantería (${bib.books.length})</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                ${bib.books.length === 0 ? '<p class="text-xs text-evo-muted">Tu biblioteca está vacía. Añade tu primer libro.</p>' : ''}
+                ${bib.books.map(b => {
+                  const pct = Math.min(100, Math.round(((b.currentPage || 0) / (b.totalPages || 1)) * 100));
+                  const statusLabel = b.status === 'completed' ? '✅ Completado' : b.status === 'reading' ? '📖 Leyendo' : '🔖 Por leer';
+                  return `
+                    <div class="bg-evo-surface border border-evo-border rounded-2xl p-4 flex flex-col justify-between space-y-3">
+                      <div>
+                        <div class="flex items-center justify-between text-[11px] mb-1">
+                          <span class="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300">${statusLabel}</span>
+                          <button onclick="deleteBook('${b.id}')" class="text-zinc-500 hover:text-red-400 cursor-pointer">✕</button>
+                        </div>
+                        <h4 class="text-sm font-bold text-white">${escapeHTML(b.title)}</h4>
+                        <p class="text-xs text-evo-muted">${escapeHTML(b.author)}</p>
+
+                        <div class="mt-3">
+                          <div class="flex justify-between text-[11px] text-evo-muted mb-1">
+                            <span>Pág. ${b.currentPage || 0} / ${b.totalPages}</span>
+                            <span class="text-white font-semibold">${pct}%</span>
+                          </div>
+                          <div class="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                            <div class="h-full bg-amber-400 rounded-full transition-all" style="width: ${pct}%"></div>
+                          </div>
+                        </div>
+                        ${b.notes ? `<p class="text-[11px] text-zinc-300 mt-2.5 bg-evo-card p-2.5 rounded-xl border border-evo-border/70">💡 ${escapeHTML(b.notes)}</p>` : ''}
+                      </div>
+
+                      ${b.status !== 'completed' ? `
+                        <div class="flex gap-2 pt-2 border-t border-evo-border/60">
+                          <button onclick="logReadingPages('${b.id}', 15)" class="flex-1 py-2 rounded-xl bg-evo-card hover:bg-zinc-800 border border-evo-border text-white text-xs font-medium cursor-pointer">
+                            +15 págs (+10 🪙)
+                          </button>
+                          <button onclick="finishBook('${b.id}')" class="px-3 py-2 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-black text-xs font-semibold cursor-pointer">
+                            Terminar
+                          </button>
+                        </div>
+                      ` : ''}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('form-book-add').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const status = document.getElementById('book-status').value;
+        const total = parseInt(document.getElementById('book-total').value, 10) || 200;
+        bib.books.push({
+          id: 'b_' + Date.now(),
+          title: document.getElementById('book-title').value.trim(),
+          author: document.getElementById('book-author').value.trim(),
+          status,
+          currentPage: status === 'completed' ? total : 0,
+          totalPages: total,
+          notes: document.getElementById('book-notes').value.trim()
+        });
+        saveState();
+        renderBiblioteca(container);
+      });
+    }
+
+    function logReadingPages(id, pages) {
+      const b = state.apps.biblioteca.books.find(x => x.id === id);
+      if (!b) return;
+      b.status = 'reading';
+      b.currentPage = Math.min(b.totalPages, (b.currentPage || 0) + pages);
+      if (b.currentPage >= b.totalPages) {
+        b.status = 'completed';
+        addRewards(40, 50, `Libro terminado: ${b.title}`);
+      } else {
+        addRewards(10, 15, `Lectura: ${b.title}`);
+      }
+      renderBiblioteca(document.getElementById('app-viewport'));
+    }
+
+    function finishBook(id) {
+      const b = state.apps.biblioteca.books.find(x => x.id === id);
+      if (!b) return;
+      b.currentPage = b.totalPages;
+      b.status = 'completed';
+      addRewards(40, 50, `Libro completado: ${b.title}`);
+      renderBiblioteca(document.getElementById('app-viewport'));
+    }
+
+    function deleteBook(id) {
+      state.apps.biblioteca.books = state.apps.biblioteca.books.filter(x => x.id !== id);
+      saveState();
+      renderBiblioteca(document.getElementById('app-viewport'));
+    }
+
+    // ==================== 10. RANKING & LIGAS ====================
+    function renderRanking(container) {
+      const rk = state.apps.ranking;
+      const myLeague = getLeagueInfo(state.user.xp);
+
+      const leaderboard = [
+        { id: 'me', name: `${state.user.name} (Tú)`, xp: state.user.xp, isMe: true },
+        ...rk.friends.map(f => ({ ...f, isMe: false }))
+      ].sort((a, b) => b.xp - a.xp);
+
+      container.innerHTML = `
+        <div class="animate-fade space-y-6">
+          ${appHeaderHTML('Ranking & Sistema de Ligas', 'Las Ligas suben con XP; tus EVO Coins siguen intactas para la Tienda', '🏆')}
+
+          <div class="bg-evo-card border border-evo-border rounded-3xl p-6 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h3 class="text-sm font-semibold text-white">Escalera de Ligas EVO (por XP acumulado)</h3>
+              <span class="text-xs font-semibold ${myLeague.current.color}">Tu liga: ${myLeague.current.icon} ${myLeague.current.name} (${state.user.xp} XP)</span>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+              ${LEAGUES.map(l => {
+                const unlocked = state.user.xp >= l.minXp;
+                const isCurrent = myLeague.current.id === l.id;
+                return `
+                  <div class="p-3 rounded-2xl border text-center transition ${isCurrent ? 'bg-zinc-800/90 border-emerald-400 shadow-lg' : unlocked ? 'bg-evo-surface border-evo-border' : 'bg-evo-surface/40 border-evo-border/50 opacity-50'}">
+                    <span class="text-2xl block">${l.icon}</span>
+                    <p class="text-xs font-bold text-white mt-1">${l.name}</p>
+                    <span class="text-[10px] text-evo-muted block mt-0.5">${l.minXp} XP</span>
+                    ${isCurrent ? '<span class="inline-block mt-1 text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-400 text-black font-bold">Actual</span>' : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-evo-card border border-evo-border rounded-3xl p-6 space-y-4">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-white">Clasificación Global / Comunidad</h3>
+                <span class="text-[11px] text-evo-muted">Preparado para sincronización multijugador</span>
+              </div>
+
+              <div class="space-y-2.5">
+                ${leaderboard.map((player, idx) => {
+                  const pLeague = getLeagueInfo(player.xp).current;
+                  const posBadge = idx === 0 ? '🥇 #1' : idx === 1 ? '🥈 #2' : idx === 2 ? '🥉 #3' : `#${idx + 1}`;
+                  return `
+                    <div class="flex items-center justify-between p-3.5 rounded-2xl border ${player.isMe ? 'bg-emerald-500/10 border-emerald-500/40' : 'bg-evo-surface border-evo-border'}">
+                      <div class="flex items-center gap-3">
+                        <span class="w-10 text-xs font-bold ${idx < 3 ? 'text-amber-300' : 'text-evo-muted'}">${posBadge}</span>
+                        <div>
+                          <p class="text-sm font-semibold ${player.isMe ? 'text-emerald-300' : 'text-white'}">${escapeHTML(player.name)}</p>
+                          <span class="text-[11px] ${pLeague.color}">${pLeague.icon} Liga ${pLeague.name}</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-3">
+                        <span class="text-xs font-bold text-white">${player.xp} XP</span>
+                        ${!player.isMe ? `<button onclick="removeFriendRank('${player.id}')" class="text-zinc-500 hover:text-red-400 text-xs cursor-pointer">✕</button>` : ''}
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <div class="bg-evo-card border border-evo-border rounded-3xl p-6 space-y-4">
+              <h3 class="text-sm font-semibold text-white">Añadir amigo / rival al Ranking</h3>
+              <p class="text-xs text-evo-muted leading-relaxed">Cuando tus amigos usen EVO, añade su alias y sus XP para competir en vuestra tabla.</p>
+              <form id="form-rank-friend" class="space-y-3">
+                <input type="text" id="rk-name" required placeholder="Nombre o alias del amigo"
+                  class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white" />
+                <input type="number" min="0" id="rk-xp" required placeholder="Sus XP actuales (ej. 650)"
+                  class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white" />
+                <button type="submit" class="w-full bg-white hover:bg-zinc-200 text-black font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                  + Añadir al Ranking
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('form-rank-friend').addEventListener('submit', (e) => {
+        e.preventDefault();
+        rk.friends.push({
+          id: 'f_' + Date.now(),
+          name: document.getElementById('rk-name').value.trim(),
+          xp: parseInt(document.getElementById('rk-xp').value, 10) || 0
+        });
+        saveState();
+        renderRanking(container);
+      });
+    }
+
+    function removeFriendRank(id) {
+      state.apps.ranking.friends = state.apps.ranking.friends.filter(f => f.id !== id);
+      saveState();
+      renderRanking(document.getElementById('app-viewport'));
+    }
+
+    // ==================== 11. JUEGOS ====================
+    let activeGameTab = 'memory';
+    let memSequence = [];
+    let memUserStep = 0;
+    let memPlaying = false;
+    let memScore = 0;
+
+    let mathScore = 0;
+    let mathTimeLeft = 20;
+    let mathAnswer = 0;
+    let mathTimer = null;
+
+    let reactStartTime = 0;
+    let reactTimeout = null;
+    let reactState = 'idle';
+
+    function renderJuegos(container) {
+      const jg = state.apps.juegos;
+      const today = getTodayStr();
+      const canClaimDailyGameBonus = jg.dailyRewardDate !== today;
+
+      container.innerHTML = `
+        <div class="animate-fade space-y-6">
+          ${appHeaderHTML('Zona de Juegos EVO', 'Entrena memoria, cálculo mental y reflejos en pausas cortas', '🎮')}
+
+          <div class="flex flex-wrap items-center justify-between gap-3 bg-evo-card border border-evo-border rounded-2xl p-3">
+            <div class="flex gap-2">
+              <button onclick="switchGameTab('memory')" class="px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer ${activeGameTab === 'memory' ? 'bg-white text-black' : 'bg-evo-surface text-evo-muted hover:text-white'}">
+                🧠 Matriz de Memoria
+              </button>
+              <button onclick="switchGameTab('math')" class="px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer ${activeGameTab === 'math' ? 'bg-white text-black' : 'bg-evo-surface text-evo-muted hover:text-white'}">
+                ⚡ Cálculo Mental
+              </button>
+              <button onclick="switchGameTab('reaction')" class="px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer ${activeGameTab === 'reaction' ? 'bg-white text-black' : 'bg-evo-surface text-evo-muted hover:text-white'}">
+                🎯 Reflejos (ms)
+              </button>
+            </div>
+            <span class="text-xs text-evo-muted px-2">
+              ${canClaimDailyGameBonus ? '🎁 Bonus diario disponible (+10 🪙 · +15 XP)' : '✓ Bonus diario de juego reclamado hoy'}
+            </span>
+          </div>
+
+          <div id="game-stage" class="bg-evo-card border border-evo-border rounded-3xl p-6 sm:p-8 max-w-2xl mx-auto"></div>
+        </div>
+      `;
+
+      const stage = document.getElementById('game-stage');
+      if (activeGameTab === 'memory') renderMemoryGame(stage);
+      else if (activeGameTab === 'math') renderMathGame(stage);
+      else renderReactionGame(stage);
+    }
+
+    function switchGameTab(tab) {
+      clearInterval(mathTimer);
+      clearTimeout(reactTimeout);
+      activeGameTab = tab;
+      renderJuegos(document.getElementById('app-viewport'));
+    }
+
+    function grantDailyGameBonus() {
+      const today = getTodayStr();
+      if (state.apps.juegos.dailyRewardDate !== today) {
+        state.apps.juegos.dailyRewardDate = today;
+        addRewards(10, 15, 'Entrenamiento mental en Juegos');
+      }
+    }
+
+    function renderMemoryGame(stage) {
+      stage.innerHTML = `
+        <div class="text-center space-y-5">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-evo-muted">Récord: <strong class="text-white">${state.apps.juegos.bestMemory}</strong></span>
+            <span id="mem-status" class="font-semibold text-cyan-300">Pulsa Iniciar para ver la secuencia</span>
+            <span class="text-evo-muted">Ronda: <strong id="mem-round" class="text-white">0</strong></span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3 max-w-xs mx-auto">
+            ${Array.from({ length: 9 }, (_, i) => `
+              <button id="mem-cell-${i}" onclick="handleMemoryTap(${i})"
+                class="h-20 rounded-2xl bg-evo-surface border border-evo-border hover:border-zinc-500 transition-all duration-150 cursor-pointer"></button>
+            `).join('')}
+          </div>
+
+          <button onclick="startMemoryGame()" class="px-6 py-3 rounded-xl bg-white hover:bg-zinc-200 text-black font-semibold text-xs cursor-pointer">
+            Iniciar / Reiniciar secuencia
+          </button>
+        </div>
+      `;
+    }
+
+    function startMemoryGame() {
+      memSequence = [];
+      memScore = 0;
+      nextMemoryRound();
+    }
+
+    function nextMemoryRound() {
+      memUserStep = 0;
+      memPlaying = true;
+      memSequence.push(Math.floor(Math.random() * 9));
+      const roundEl = document.getElementById('mem-round');
+      const statusEl = document.getElementById('mem-status');
+      if (roundEl) roundEl.textContent = memSequence.length;
+      if (statusEl) statusEl.textContent = 'Observa con atención...';
+
+      memSequence.forEach((cellIdx, step) => {
+        setTimeout(() => {
+          flashMemoryCell(cellIdx);
+          if (step === memSequence.length - 1) {
+            setTimeout(() => {
+              memPlaying = false;
+              const st = document.getElementById('mem-status');
+              if (st) st.textContent = '¡Tu turno! Repite el patrón';
+            }, 450);
+          }
+        }, (step + 1) * 550);
+      });
+    }
+
+    function flashMemoryCell(idx) {
+      const cell = document.getElementById(`mem-cell-${idx}`);
+      if (!cell) return;
+      SoundEngine.playClick(420 + idx * 45);
+      cell.classList.add('bg-cyan-400', 'border-cyan-200', 'scale-95');
+      setTimeout(() => {
+        cell.classList.remove('bg-cyan-400', 'border-cyan-200', 'scale-95');
+      }, 320);
+    }
+
+    function handleMemoryTap(idx) {
+      if (memPlaying || memSequence.length === 0) return;
+      flashMemoryCell(idx);
+      if (idx === memSequence[memUserStep]) {
+        memUserStep++;
+        if (memUserStep === memSequence.length) {
+          memScore = memSequence.length;
+          if (memScore > state.apps.juegos.bestMemory) {
+            state.apps.juegos.bestMemory = memScore;
+            saveState();
+          }
+          if (memScore >= 3) grantDailyGameBonus();
+          const st = document.getElementById('mem-status');
+          if (st) st.textContent = '¡Correcto! Siguiente nivel...';
+          setTimeout(nextMemoryRound, 700);
+        }
+      } else {
+        SoundEngine.playClick(180);
+        const st = document.getElementById('mem-status');
+        if (st) st.textContent = `Fallo en ronda ${memSequence.length}. Pulsa Iniciar.`;
+        memSequence = [];
+      }
+    }
+
+    function renderMathGame(stage) {
+      stage.innerHTML = `
+        <div class="text-center space-y-5">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-evo-muted">Récord: <strong class="text-white">${state.apps.juegos.bestMath} pts</strong></span>
+            <span id="math-timer" class="font-mono font-bold text-amber-300">20s</span>
+            <span class="text-evo-muted">Puntos: <strong id="math-score" class="text-white">0</strong></span>
+          </div>
+
+          <div id="math-question" class="text-3xl font-bold text-white py-6 bg-evo-surface border border-evo-border rounded-2xl">
+            ¿Listo?
+          </div>
+
+          <form onsubmit="submitMathAnswer(event)" class="flex max-w-xs mx-auto gap-2">
+            <input type="number" id="math-input" placeholder="Respuesta"
+              class="flex-1 bg-evo-surface border border-evo-border rounded-xl px-4 py-3 text-center text-sm text-white" />
+            <button type="submit" class="px-5 py-3 rounded-xl bg-white text-black font-semibold text-xs cursor-pointer">OK</button>
+          </form>
+
+          <button onclick="startMathGame()" class="px-6 py-2.5 rounded-xl bg-evo-surface hover:bg-zinc-800 border border-evo-border text-xs text-white cursor-pointer">
+            Empezar partida (20s)
+          </button>
+        </div>
+      `;
+    }
+
+    function startMathGame() {
+      clearInterval(mathTimer);
+      mathScore = 0;
+      mathTimeLeft = 20;
+      document.getElementById('math-score').textContent = '0';
+      nextMathQuestion();
+      document.getElementById('math-input').focus();
+
+      mathTimer = setInterval(() => {
+        mathTimeLeft--;
+        const tEl = document.getElementById('math-timer');
+        if (tEl) tEl.textContent = `${mathTimeLeft}s`;
+        if (mathTimeLeft <= 0) {
+          clearInterval(mathTimer);
+          document.getElementById('math-question').textContent = `Fin: ${mathScore} puntos`;
+          if (mathScore > state.apps.juegos.bestMath) {
+            state.apps.juegos.bestMath = mathScore;
+            saveState();
+          }
+          if (mathScore >= 5) grantDailyGameBonus();
+        }
+      }, 1000);
+    }
+
+    function nextMathQuestion() {
+      const a = Math.floor(Math.random() * 18) + 4;
+      const b = Math.floor(Math.random() * 15) + 3;
+      const isPlus = Math.random() > 0.4;
+      mathAnswer = isPlus ? a + b : a * b;
+      const qEl = document.getElementById('math-question');
+      if (qEl) qEl.textContent = `${a} ${isPlus ? '+' : '×'} ${b}`;
+    }
+
+    function submitMathAnswer(e) {
+      e.preventDefault();
+      if (mathTimeLeft <= 0) return;
+      const inp = document.getElementById('math-input');
+      const val = parseInt(inp.value, 10);
+      inp.value = '';
+      if (val === mathAnswer) {
+        mathScore++;
+        SoundEngine.playClick(720);
+        document.getElementById('math-score').textContent = mathScore;
+        nextMathQuestion();
+      } else {
+        SoundEngine.playClick(200);
+      }
+    }
+
+    function renderReactionGame(stage) {
+      const best = state.apps.juegos.bestReaction;
+      stage.innerHTML = `
+        <div class="text-center space-y-5">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-evo-muted">Mejor tiempo: <strong class="text-emerald-400">${best ? best + ' ms' : '—'}</strong></span>
+            <span class="text-evo-muted">Pulsa cuando cambie a verde</span>
+          </div>
+
+          <button id="react-pad" onclick="handleReactionClick()"
+            class="w-full h-48 rounded-2xl bg-evo-surface border border-evo-border flex flex-col items-center justify-center gap-2 transition cursor-pointer">
+            <span id="react-main-text" class="text-lg font-bold text-white">Pulsa aquí para empezar</span>
+            <span id="react-sub-text" class="text-xs text-evo-muted">Mide tu velocidad de reacción</span>
+          </button>
+        </div>
+      `;
+    }
+
+    function handleReactionClick() {
+      const pad = document.getElementById('react-pad');
+      const mainT = document.getElementById('react-main-text');
+      const subT = document.getElementById('react-sub-text');
+      if (!pad) return;
+
+      if (reactState === 'idle') {
+        reactState = 'waiting';
+        pad.className = 'w-full h-48 rounded-2xl bg-amber-500/20 border border-amber-400/50 flex flex-col items-center justify-center gap-2 cursor-pointer';
+        mainT.textContent = 'Espera al verde...';
+        subT.textContent = 'No pulses todavía';
+        const delay = 1400 + Math.random() * 2400;
+        reactTimeout = setTimeout(() => {
+          reactState = 'ready';
+          reactStartTime = performance.now();
+          SoundEngine.playClick(820);
+          pad.className = 'w-full h-48 rounded-2xl bg-emerald-400 text-black flex flex-col items-center justify-center gap-2 cursor-pointer';
+          mainT.className = 'text-xl font-bold text-black';
+          mainT.textContent = '¡PULSA AHORA!';
+          subT.className = 'text-xs text-black/80';
+          subT.textContent = '¡Ya!';
+        }, delay);
+      } else if (reactState === 'waiting') {
+        clearTimeout(reactTimeout);
+        reactState = 'idle';
+        pad.className = 'w-full h-48 rounded-2xl bg-red-500/20 border border-red-500/40 flex flex-col items-center justify-center gap-2 cursor-pointer';
+        mainT.textContent = 'Demasiado pronto';
+        subT.textContent = 'Pulsa para intentarlo de nuevo';
+      } else if (reactState === 'ready') {
+        const diff = Math.round(performance.now() - reactStartTime);
+        reactState = 'idle';
+        if (!state.apps.juegos.bestReaction || diff < state.apps.juegos.bestReaction) {
+          state.apps.juegos.bestReaction = diff;
+          saveState();
+        }
+        grantDailyGameBonus();
+        renderReactionGame(document.getElementById('game-stage'));
+        document.getElementById('react-main-text').textContent = `${diff} ms`;
+        document.getElementById('react-sub-text').textContent = 'Pulsa para repetir';
+      }
+    }
+
+    // ==================== 12. TIENDA EVO ====================
+    function renderTienda(container) {
+      const shop = state.apps.tienda;
+
+      container.innerHTML = `
+        <div class="animate-fade space-y-6">
+          ${appHeaderHTML('Tienda EVO', 'Canjea el esfuerzo de tus hábitos, estudio y entrenos por recompensas', '🪙')}
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-4">
+              <div class="bg-evo-card border border-evo-border rounded-3xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-sm font-semibold text-white">Recompensas disponibles</h3>
+                  <span class="text-xs font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-xl">
+                    Saldo: 🪙 ${state.user.coins}
+                  </span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  ${shop.items.map(item => {
+                    const canAfford = state.user.coins >= item.cost;
+                    return `
+                      <div class="bg-evo-surface border border-evo-border rounded-2xl p-4 flex flex-col justify-between gap-4">
+                        <div>
+                          <div class="flex items-center justify-between">
+                            <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-zinc-800 text-evo-muted">${escapeHTML(item.icon || '🎁')} ${escapeHTML(item.category)}</span>
+                            <button onclick="deleteShopItem('${item.id}')" class="text-zinc-500 hover:text-red-400 text-xs cursor-pointer">✕</button>
+                          </div>
+                          <h4 class="text-sm font-semibold text-white mt-2">${escapeHTML(item.title)}</h4>
+                        </div>
+                        <button onclick="redeemShopItem('${item.id}')"
+                          class="w-full py-2.5 rounded-xl text-xs font-semibold transition cursor-pointer ${canAfford ? 'bg-amber-400 hover:bg-amber-300 text-black' : 'bg-zinc-800 text-zinc-500'}">
+                          Canjear por 🪙 ${item.cost}
+                        </button>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+
+              <div class="bg-evo-card border border-evo-border rounded-3xl p-6">
+                <h3 class="text-sm font-semibold text-white mb-3">Crear recompensa personalizada</h3>
+                <form id="form-shop-add" class="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
+                  <input type="text" id="shop-icon" value="🎁" maxlength="2"
+                    class="bg-evo-surface border border-evo-border rounded-xl px-3 py-2.5 text-center text-sm text-white" />
+                  <input type="text" id="shop-title" required placeholder="Ej. Comprar camiseta / Partida extra"
+                    class="sm:col-span-2 bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white" />
+                  <input type="number" min="5" id="shop-cost" required placeholder="Precio (🪙)"
+                    class="bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white" />
+                  <button type="submit" class="bg-white hover:bg-zinc-200 text-black font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                    + Crear
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <div class="bg-evo-card border border-evo-border rounded-3xl p-6">
+              <h3 class="text-sm font-semibold text-white mb-4">Historial de canjes</h3>
+              <div class="space-y-2.5 max-h-96 overflow-y-auto">
+                ${shop.history.length === 0 ? '<p class="text-xs text-evo-muted">Aún no has canjeado ninguna recompensa.</p>' : ''}
+                ${shop.history.slice().reverse().map(h => `
+                  <div class="bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs flex items-center justify-between">
+                    <div>
+                      <p class="font-medium text-white">${escapeHTML(h.title)}</p>
+                      <span class="text-[10px] text-evo-muted">${escapeHTML(h.date)}</span>
+                    </div>
+                    <span class="text-amber-300 font-semibold">-🪙 ${h.cost}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('form-shop-add').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const icon = (document.getElementById('shop-icon').value || '🎁').trim();
+        const title = document.getElementById('shop-title').value.trim();
+        const cost = parseInt(document.getElementById('shop-cost').value, 10);
+        if (!title || !cost) return;
+        shop.items.push({ id: 'r_' + Date.now(), icon, title, cost, category: 'Personal' });
+        saveState();
+        renderTienda(container);
+      });
+    }
+
+    function redeemShopItem(id) {
+      const item = state.apps.tienda.items.find(x => x.id === id);
+      if (!item) return;
+      if (!spendCoins(item.cost, item.title)) return;
+      state.apps.tienda.history.push({
+        title: item.title,
+        cost: item.cost,
+        date: new Date().toLocaleDateString('es-ES')
+      });
+      saveState();
+      renderTienda(document.getElementById('app-viewport'));
+    }
+
+    function deleteShopItem(id) {
+      state.apps.tienda.items = state.apps.tienda.items.filter(x => x.id !== id);
+      saveState();
+      renderTienda(document.getElementById('app-viewport'));
+    }
+
+    // ==================== 13. CONFIGURACIÓN & GUARDADO/CARGA DE PROGRESO (V1.3) ====================
+    function renderConfiguracion(container) {
+      const lastBackupText = state.lastBackupAt
+        ? `Última copia realizada: ${escapeHTML(state.lastBackupAt)}`
+        : 'Aún no has descargado una copia de seguridad';
+
+      container.innerHTML = `
+        <div class="animate-fade space-y-6">
+          ${appHeaderHTML('Configuración y Guardado de Progreso', 'Backup completo, carga de partida, seguridad, fondo y audio', '⚙')}
+
+          <!-- DEDICATED BACKUP & RESTORE PANEL (V1.3 HIGHLIGHT) -->
+          <div class="bg-evo-card border border-cyan-500/30 rounded-3xl p-6 space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-cyan-300 uppercase tracking-wider mb-1">
+                  <span>💾 Sistema de Guardado EVO V1.3</span>
+                </div>
+                <h2 class="text-base font-bold text-white">Guardar Progreso y Cargar Progreso</h2>
+                <p class="text-xs text-evo-muted mt-0.5">Exporta tu avance completo para no perder nada si cambias de navegador o dispositivo.</p>
+              </div>
+              <span class="text-xs px-3 py-1.5 rounded-xl bg-evo-surface border border-evo-border text-zinc-300">
+                ${lastBackupText}
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <!-- EXPORT / SAVE PROGRESS -->
+              <div class="bg-evo-surface border border-evo-border rounded-2xl p-5 space-y-3">
+                <h3 class="text-sm font-semibold text-white">1. Guardar mi progreso actual</h3>
+                <p class="text-xs text-evo-muted leading-relaxed">Descarga un archivo <code class="text-cyan-300">.json</code> con todas tus monedas, XP, ligas, hábitos, estudio y notas, o copia el código de respaldo.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  <button onclick="downloadBackupFile()" class="py-3 px-4 rounded-xl bg-white hover:bg-zinc-200 text-black font-semibold text-xs transition cursor-pointer">
+                    ↓ Descargar archivo (.json)
+                  </button>
+                  <button onclick="copyBackupCodeToClipboard()" class="py-3 px-4 rounded-xl bg-evo-card hover:bg-zinc-800 border border-evo-border text-cyan-300 font-semibold text-xs transition cursor-pointer">
+                    📋 Copiar código respaldo
+                  </button>
+                </div>
+              </div>
+
+              <!-- IMPORT / LOAD PROGRESS -->
+              <div class="bg-evo-surface border border-evo-border rounded-2xl p-5 space-y-3">
+                <h3 class="text-sm font-semibold text-white">2. Cargar progreso guardado</h3>
+                <p class="text-xs text-evo-muted leading-relaxed">Selecciona tu archivo <code class="text-cyan-300">.json</code> guardado o pega un código de respaldo para restaurar tu partida.</p>
+                <div class="space-y-2.5">
+                  <label class="w-full py-2.5 px-4 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-200 font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer transition">
+                    <span>↑ Seleccionar archivo de progreso (.json)</span>
+                    <input type="file" accept=".json" class="hidden" onchange="handleBackupFileSelect(event)" />
+                  </label>
+                  <div class="flex gap-2">
+                    <textarea id="restore-code-input" rows="1" placeholder="O pega aquí tu código EVO13_..."
+                      class="flex-1 bg-evo-card border border-evo-border rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-400"></textarea>
+                    <button onclick="handleBackupCodeRestore()" class="px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-black font-semibold text-xs cursor-pointer">
+                      Cargar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-evo-card border border-evo-border rounded-3xl p-6 space-y-4">
+              <h3 class="text-sm font-semibold text-white">Datos y Contraseña</h3>
+              <form id="form-cfg-user" class="space-y-3">
+                <div>
+                  <label class="block text-xs text-evo-muted mb-1">Nombre</label>
+                  <input type="text" id="cfg-name" required value="${escapeHTML(state.user.name)}"
+                    class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white" />
+                </div>
+                <div>
+                  <label class="block text-xs text-evo-muted mb-1">Fecha de nacimiento</label>
+                  <input type="date" id="cfg-dob" required value="${escapeHTML(state.user.dob)}"
+                    class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white" />
+                </div>
+                <div>
+                  <label class="block text-xs text-evo-muted mb-1">Nueva contraseña (dejar igual si no cambia)</label>
+                  <input type="password" id="cfg-pass" required minlength="4" value="${escapeHTML(state.user.password)}"
+                    class="w-full bg-evo-surface border border-evo-border rounded-xl px-3.5 py-2.5 text-xs text-white" />
+                </div>
+                <button type="submit" class="w-full bg-white hover:bg-zinc-200 text-black font-semibold text-xs py-2.5 rounded-xl cursor-pointer">
+                  Guardar cambios
+                </button>
+              </form>
+            </div>
+
+            <div class="bg-evo-card border border-evo-border rounded-3xl p-6 space-y-5">
+              <div>
+                <h3 class="text-sm font-semibold text-white mb-3">Visual, Fondo Animado y Audio</h3>
+                <div class="flex items-center justify-between bg-evo-surface border border-evo-border rounded-xl p-3 mb-3">
+                  <div>
+                    <p class="text-xs font-medium text-white">Fondo animado de partículas</p>
+                    <span class="text-[11px] text-evo-muted">Activa o desactiva la animación de fondo</span>
+                  </div>
+                  <button onclick="toggleAnimatedBg()" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${state.visual.animatedBg ? 'bg-cyan-400 text-black' : 'bg-zinc-800 text-zinc-400'}">
+                    ${state.visual.animatedBg ? 'Activado' : 'Desactivado'}
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-[11px] text-evo-muted mb-1">Estilo musical</label>
+                    <select id="cfg-music-style" onchange="updateMusicSettings()"
+                      class="w-full bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs text-white">
+                      <option value="lofi" ${state.audio.musicStyle === 'lofi' ? 'selected' : ''}>Lo-Fi Relajado</option>
+                      <option value="synth" ${state.audio.musicStyle === 'synth' ? 'selected' : ''}>Synth Enfoque</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-evo-muted mb-1">Volumen (${Math.round((state.audio.musicVolume || 0.25) * 100)}%)</label>
+                    <input type="range" min="0.05" max="0.6" step="0.05" value="${state.audio.musicVolume || 0.25}"
+                      onchange="updateMusicVolume(this.value)" class="w-full accent-white cursor-pointer mt-2" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-4 border-t border-evo-border">
+                <h3 class="text-sm font-semibold text-white mb-3">Ajustar recompensas (EVO Coins)</h3>
+                <form id="form-cfg-rewards" class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-[11px] text-evo-muted mb-1">Por hábito</label>
+                    <input type="number" id="rew-habit" value="${state.rewardsConfig.habit}"
+                      class="w-full bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs text-white" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-evo-muted mb-1">Por Pomodoro</label>
+                    <input type="number" id="rew-study" value="${state.rewardsConfig.studyPomodoro}"
+                      class="w-full bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs text-white" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-evo-muted mb-1">Por entreno</label>
+                    <input type="number" id="rew-workout" value="${state.rewardsConfig.workout}"
+                      class="w-full bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs text-white" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-evo-muted mb-1">Por habilidad</label>
+                    <input type="number" id="rew-skill" value="${state.rewardsConfig.skillPractice}"
+                      class="w-full bg-evo-surface border border-evo-border rounded-xl px-3 py-2 text-xs text-white" />
+                  </div>
+                  <button type="submit" class="col-span-2 bg-evo-surface hover:bg-zinc-800 border border-evo-border text-white font-medium text-xs py-2.5 rounded-xl cursor-pointer">
+                    Actualizar valores
+                  </button>
+                </form>
+              </div>
+
+              <div class="pt-4 border-t border-evo-border space-y-2.5">
+                <h4 class="text-xs font-semibold uppercase tracking-wider text-evo-muted">Zona de peligro</h4>
+                <button onclick="confirmFactoryReset()" class="w-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-xs text-red-300 py-2.5 px-3 rounded-xl cursor-pointer">
+                  Reiniciar EVO de fábrica
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('form-cfg-user').addEventListener('submit', (e) => {
+        e.preventDefault();
+        state.user.name = document.getElementById('cfg-name').value.trim();
+        state.user.dob = document.getElementById('cfg-dob').value;
+        state.user.age = calculateBirthdayInfo(state.user.dob).exactAge;
+        state.user.password = document.getElementById('cfg-pass').value;
+        saveState();
+        showToast('Configuración de cuenta guardada');
+      });
+
+      document.getElementById('form-cfg-rewards').addEventListener('submit', (e) => {
+        e.preventDefault();
+        state.rewardsConfig.habit = parseInt(document.getElementById('rew-habit').value, 10) || 15;
+        state.rewardsConfig.studyPomodoro = parseInt(document.getElementById('rew-study').value, 10) || 25;
+        state.rewardsConfig.workout = parseInt(document.getElementById('rew-workout').value, 10) || 35;
+        state.rewardsConfig.skillPractice = parseInt(document.getElementById('rew-skill').value, 10) || 20;
+        saveState();
+        showToast('Recompensas actualizadas');
+      });
+    }
+
+    function updateMusicSettings() {
+      state.audio.musicStyle = document.getElementById('cfg-music-style').value;
+      saveState();
+      if (state.audio.musicEnabled) SoundEngine.startMusic();
+      showToast(`Estilo musical: ${state.audio.musicStyle.toUpperCase()}`);
+    }
+
+    function updateMusicVolume(val) {
+      state.audio.musicVolume = parseFloat(val) || 0.25;
+      saveState();
+      renderConfiguracion(document.getElementById('app-viewport'));
+    }
+
+    function confirmFactoryReset() {
+      openModal({
+        title: '¿Reiniciar EVO de fábrica?',
+        desc: 'Se borrarán todos tus datos, monedas, ligas, hábitos y progreso guardado en este navegador.',
+        confirmText: 'Sí, borrar todo',
+        danger: true,
+        onConfirm: () => {
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem('evo_os_state_v1');
+          state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+          initBoot();
+          showToast('Sistema EVO reiniciado');
+        }
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', initBoot);
+  </script>
+</body>
+</html>
