@@ -1,10 +1,27 @@
-# EVO — Personal Life Operating System
+# EVO — Personal Life Operating System (SM Company)
 
 > Sistema operativo personal todo-en-uno diseñado para centralizar disciplina, estudio, entrenamiento, finanzas, productividad y gamificación real bajo una interfaz minimalista y de alto rendimiento.
 
 ---
 
 ## 📋 Historial de Versiones (Changelog)
+
+### **V1.4 — Rentabilidad, Cronómetro de Enfoque y Estadísticas Visuales**
+**Fecha de creación:** 28 de noviembre de 2026
+
+* **Calculadora de Margen y Rentabilidad (en Negocios):**
+  * Cálculo instantáneo de coste total (precio de compra + envío y comisiones), beneficio neto, margen porcentual (%) y ROI.
+  * Acciones directas para registrar el resultado en los movimientos financieros o añadir el producto al catálogo/stock.
+* **Temporizador y Cronómetro de Enfoque (en Estudio, Deporte y Habilidades):**
+  * Reloj integrado con modo cuenta atrás (con atajos rápidos o minutos personalizados) y cronómetro libre, con control de inicio, pausa y reinicio.
+  * Al guardar una sesión, suma automáticamente los minutos dedicados, otorga **XP** y recompensa con **EVO Coins**.
+* **Estadísticas Visuales y Modo Enfoque:**
+  * Panel visual en el Hub con gráfica de barras de **XP** de los últimos 7 días, seguimiento de hábitos y comparativa de ingresos frente a gastos.
+  * **Modo Enfoque** (`🎯 Enfoque` o `Alt+F`) para atenuar elementos secundarios y concentrarte en lo importante.
+* **Compatibilidad Total de Respaldos:**
+  * Conserva el sistema de exportación/importación `.json` y código de respaldo de versiones anteriores para migrar tu progreso sin pérdida de datos.
+
+---
 
 ### **V1.3 — Copias de Seguridad, Identidad Visual y Portabilidad**
 **Fecha de creación:** 28 de noviembre de 2026
@@ -67,14 +84,14 @@
 
 ---
 
-## 🧩 Módulos Actuales (13 Apps en EVO V1.3)
+## 🧩 Módulos Actuales (13 Apps en EVO V1.4)
 
 1. **Perfil** — Identidad, estadísticas globales, liga actual y progreso de nivel.
-2. **Negocios** — Finanzas personales, ingresos/gastos, stock y objetivos económicos.
-3. **Estudio** — Asignaturas, bloques de estudio, flashcards y preparación de exámenes.
-4. **Deporte** — Rutinas de entrenamiento, seguimiento físico e hidratación.
+2. **Negocios** — Finanzas personales, ingresos/gastos, stock, metas y calculadora de margen/rentabilidad.
+3. **Estudio** — Asignaturas, bloques de estudio, flashcards, exámenes y temporizador/cronómetro de enfoque.
+4. **Deporte** — Rutinas de entrenamiento, seguimiento físico, hidratación y cronómetro de sesión.
 5. **Hábitos** — Rutinas diarias con rachas y seguimiento de consistencia.
-6. **Habilidades** — Desarrollo técnico y creativo por horas/minutos de práctica.
+6. **Habilidades** — Desarrollo técnico y creativo por minutos de práctica y temporizador/cronómetro.
 7. **Diario / Journaling** — Reflexión diaria, claridad mental y registro personal.
 8. **Misiones, Proyectos y Tareas** — Organización táctica de metas y pendientes.
 9. **Biblioteca (Libros)** — Gestión de lectura y progreso por libro.
